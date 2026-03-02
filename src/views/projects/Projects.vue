@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useProjectStore } from '../../stores/projectStore'
 import type { Project } from '../../stores/projectStore'
 
@@ -9,8 +9,34 @@ const name = ref('')
 const description = ref('')
 const editingId = ref<number | null>(null)
 
+const searchQuery = ref('')
+const selectedStatus = ref<'all' | 'active' | 'completed'>('all')
+
 onMounted(() => {
   projectStore.fetchProjects()
+})
+
+/* 🔹 Debounce Search */
+let timeout: any
+watch(searchQuery, () => {
+  clearTimeout(timeout)
+  timeout = setTimeout(() => {
+    // just trigger reactivity
+  }, 400)
+})
+
+/* 🔹 Filtered + Searched Projects */
+const filteredProjects = computed(() => {
+  return projectStore.projects.filter(project => {
+    const matchesSearch =
+      project.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+
+    const matchesStatus =
+      selectedStatus.value === 'all' ||
+      project.status === selectedStatus.value
+
+    return matchesSearch && matchesStatus
+  })
 })
 
 function handleAddProject() {
@@ -53,30 +79,34 @@ function resetForm() {
 }
 </script>
 
-<template>
-  <div>
-    <h2 class="text-2xl font-bold mb-4">
-      Projects ({{ projectStore.totalProjects }})
-    </h2>
 
-    <!-- Form -->
-    <div class="mb-6 flex gap-2">
+<template>
+  <div class="max-w-4xl mx-auto">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-3xl font-bold">
+        Projects ({{ filteredProjects.length }})
+      </h2>
+    </div>
+
+    <!-- Add / Edit Form -->
+    <div class="bg-white shadow rounded p-4 mb-6 flex gap-3">
       <input
         v-model="name"
         placeholder="Project name"
-        class="border p-2"
+        class="border rounded px-3 py-2 flex-1"
       />
       <input
         v-model="description"
         placeholder="Description"
-        class="border p-2"
+        class="border rounded px-3 py-2 flex-1"
       />
 
-      <!-- Add / Update Button -->
       <button
         v-if="!editingId"
         @click="handleAddProject"
-        class="bg-blue-500 text-white px-4 py-2 rounded"
+        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
       >
         Add
       </button>
@@ -84,28 +114,45 @@ function resetForm() {
       <button
         v-else
         @click="handleUpdate"
-        class="bg-green-500 text-white px-4 py-2 rounded"
+        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
       >
         Update
       </button>
     </div>
 
-    <!-- Loading -->
-    <p v-if="projectStore.loading">Loading...</p>
-    <p v-if="projectStore.error" class="text-red-500">
-      {{ projectStore.error }}
-    </p>
+    <!-- Search + Filter -->
+    <div class="flex gap-4 mb-6">
+      <input
+        v-model="searchQuery"
+        placeholder="Search projects..."
+        class="border rounded px-3 py-2 flex-1"
+      />
 
-    <!-- List -->
-    <div v-if="projectStore.projects.length">
+      <select
+        v-model="selectedStatus"
+        class="border rounded px-3 py-2"
+      >
+        <option value="all">All</option>
+        <option value="active">Active</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+
+    <!-- Loading -->
+    <div v-if="projectStore.loading" class="text-center py-6">
+      Loading projects...
+    </div>
+
+    <!-- Projects List -->
+    <div v-if="filteredProjects.length" class="space-y-4">
       <div
-        v-for="project in projectStore.projects"
+        v-for="project in filteredProjects"
         :key="project.id"
-        class="border p-4 mb-2 flex justify-between items-center"
+        class="bg-white shadow rounded p-4 flex justify-between items-center"
       >
         <div>
-          <h3 class="font-semibold">{{ project.name }}</h3>
-          <p class="text-sm text-gray-600">
+          <h3 class="font-semibold text-lg">{{ project.name }}</h3>
+          <p class="text-gray-500 text-sm">
             {{ project.description }}
           </p>
         </div>
@@ -113,14 +160,14 @@ function resetForm() {
         <div class="flex gap-3">
           <button
             @click="startEdit(project)"
-            class="text-blue-500"
+            class="text-blue-600 hover:underline"
           >
             Edit
           </button>
 
           <button
             @click="projectStore.deleteProject(project.id)"
-            class="text-red-500"
+            class="text-red-600 hover:underline"
           >
             Delete
           </button>
@@ -128,6 +175,9 @@ function resetForm() {
       </div>
     </div>
 
-    <p v-else>No projects yet.</p>
+    <div v-else class="text-center text-gray-500 py-10">
+      No projects found.
+    </div>
+
   </div>
 </template>
