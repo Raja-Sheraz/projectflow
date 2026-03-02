@@ -23,7 +23,7 @@ onMounted(() => {
   projectStore.fetchProjects()
 })
 
-/* 🔹 Debounce */
+/* 🔹 Debounce Search */
 let timeout: any
 watch(searchQuery, (value) => {
   clearTimeout(timeout)
@@ -33,7 +33,7 @@ watch(searchQuery, (value) => {
   }, 400)
 })
 
-/* 🔹 Filtered */
+/* 🔹 Filtered Projects */
 const filteredProjects = computed(() => {
   return projectStore.projects.filter(project => {
     const matchesSearch =
@@ -48,11 +48,19 @@ const filteredProjects = computed(() => {
   })
 })
 
-/* 🔹 Pagination Logic */
+/* 🔹 Total Pages */
 const totalPages = computed(() =>
   Math.ceil(filteredProjects.value.length / itemsPerPage)
 )
 
+/* 🔹 Fix Pagination Bug (Important) */
+watch(totalPages, (newTotal) => {
+  if (currentPage.value > newTotal) {
+    currentPage.value = newTotal || 1
+  }
+})
+
+/* 🔹 Paginated Projects */
 const paginatedProjects = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   return filteredProjects.value.slice(start, start + itemsPerPage)
@@ -269,7 +277,7 @@ function resetForm() {
       </button>
     </div>
 
-    <!-- Empty -->
+    <!-- Empty State -->
     <div
       v-if="!projectStore.loading && !filteredProjects.length"
       class="text-center text-gray-400 py-16 text-lg"
