@@ -54,13 +54,25 @@ export const useProjectStore = defineStore('projects', () => {
     localStorage.setItem('projects', JSON.stringify(projects.value))
   }
 
-  return {
-    projects,
-    loading,
-    error,
-    totalProjects,
-    fetchProjects,
-    addProject,
-    deleteProject
+  function updateProject(updatedProject: Project) {
+  const index = projects.value.findIndex(p => p.id === updatedProject.id)
+
+  if (index !== -1) {
+    projects.value[index] = updatedProject
+    localStorage.setItem('projects', JSON.stringify(projects.value))
   }
+}
+
+return {
+  projects,
+  loading,
+  error,
+  totalProjects,
+  fetchProjects,
+  addProject,
+  deleteProject,
+  updateProject
+}
+
+
 })
