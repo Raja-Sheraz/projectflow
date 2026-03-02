@@ -2,6 +2,7 @@
 import { onMounted, ref, computed, watch } from 'vue'
 import { useProjectStore } from '../../stores/projectStore'
 import type { Project } from '../../stores/projectStore'
+import BaseModal from '../../components/BaseModal.vue'
 
 const projectStore = useProjectStore()
 
@@ -9,6 +10,7 @@ const projectStore = useProjectStore()
 const name = ref('')
 const description = ref('')
 const editingId = ref<number | null>(null)
+const showModal = ref(false)
 
 /* -------------------- Search + Filter -------------------- */
 const searchQuery = ref('')
@@ -23,7 +25,7 @@ onMounted(() => {
   projectStore.fetchProjects()
 })
 
-/* 🔹 Debounce Search */
+/* 🔹 Debounce */
 let timeout: any
 watch(searchQuery, (value) => {
   clearTimeout(timeout)
@@ -33,7 +35,7 @@ watch(searchQuery, (value) => {
   }, 400)
 })
 
-/* 🔹 Filtered Projects */
+/* 🔹 Filter */
 const filteredProjects = computed(() => {
   return projectStore.projects.filter(project => {
     const matchesSearch =
@@ -48,19 +50,18 @@ const filteredProjects = computed(() => {
   })
 })
 
-/* 🔹 Total Pages */
+/* 🔹 Pagination */
 const totalPages = computed(() =>
   Math.ceil(filteredProjects.value.length / itemsPerPage)
 )
 
-/* 🔹 Fix Pagination Bug (Important) */
+/* 🔹 Fix Pagination Edge Case */
 watch(totalPages, (newTotal) => {
   if (currentPage.value > newTotal) {
     currentPage.value = newTotal || 1
   }
 })
 
-/* 🔹 Paginated Projects */
 const paginatedProjects = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   return filteredProjects.value.slice(start, start + itemsPerPage)
@@ -88,6 +89,7 @@ function startEdit(project: Project) {
   editingId.value = project.id
   name.value = project.name
   description.value = project.description
+  showModal.value = true
 }
 
 function handleUpdate() {
@@ -116,6 +118,7 @@ function resetForm() {
   editingId.value = null
   name.value = ''
   description.value = ''
+  showModal.value = false
 }
 </script>
 
@@ -128,41 +131,12 @@ function resetForm() {
         Projects
       </h2>
 
-      <span class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm">
-        {{ filteredProjects.length }} Total
-      </span>
-    </div>
-
-    <!-- Form -->
-    <div class="bg-white shadow-md rounded-lg p-6 mb-8">
-      <div class="flex flex-col md:flex-row gap-4">
-        <input
-          v-model="name"
-          placeholder="Project name"
-          class="border rounded px-4 py-2 flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
-        />
-        <input
-          v-model="description"
-          placeholder="Description"
-          class="border rounded px-4 py-2 flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
-        />
-
-        <button
-          v-if="!editingId"
-          @click="handleAddProject"
-          class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
-        >
-          Add
-        </button>
-
-        <button
-          v-else
-          @click="handleUpdate"
-          class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition"
-        >
-          Update
-        </button>
-      </div>
+      <button
+        @click="showModal = true"
+        class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+      >
+        Add Project
+      </button>
     </div>
 
     <!-- Search + Filter -->
@@ -183,17 +157,12 @@ function resetForm() {
       </select>
     </div>
 
-    <!-- Loading -->
-    <div v-if="projectStore.loading" class="text-center py-10 text-gray-500">
-      Loading projects...
-    </div>
-
     <!-- Project Cards -->
     <div v-if="paginatedProjects.length" class="space-y-6">
       <div
         v-for="project in paginatedProjects"
         :key="project.id"
-        class="bg-white shadow-md rounded-lg p-6 flex flex-col md:flex-row justify-between gap-4"
+        class="bg-white shadow-md rounded-lg p-6 flex justify-between items-center"
       >
         <div>
           <div class="flex items-center gap-3 mb-2">
@@ -218,24 +187,24 @@ function resetForm() {
           </p>
         </div>
 
-        <div class="flex flex-wrap gap-3 items-center">
+        <div class="flex gap-4">
           <button
             @click="startEdit(project)"
-            class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            class="text-blue-600 hover:text-blue-800 text-sm"
           >
             Edit
           </button>
 
           <button
             @click="projectStore.deleteProject(project.id)"
-            class="text-red-600 hover:text-red-800 text-sm font-medium"
+            class="text-red-600 hover:text-red-800 text-sm"
           >
             Delete
           </button>
 
           <button
             @click="toggleStatus(project)"
-            class="text-purple-600 hover:text-purple-800 text-sm font-medium"
+            class="text-purple-600 hover:text-purple-800 text-sm"
           >
             {{ project.status === 'active' ? 'Mark Completed' : 'Mark Active' }}
           </button>
@@ -277,13 +246,59 @@ function resetForm() {
       </button>
     </div>
 
-    <!-- Empty State -->
+    <!-- Empty -->
     <div
       v-if="!projectStore.loading && !filteredProjects.length"
       class="text-center text-gray-400 py-16 text-lg"
     >
       🚀 No projects found.
     </div>
+
+    <!-- Modal -->
+    <BaseModal v-model="showModal">
+      <h2 class="text-xl font-semibold mb-4">
+        {{ editingId ? 'Edit Project' : 'Add Project' }}
+      </h2>
+
+      <div class="space-y-4">
+        <input
+          v-model="name"
+          placeholder="Project name"
+          class="border rounded px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 outline-none"
+        />
+
+        <input
+          v-model="description"
+          placeholder="Description"
+          class="border rounded px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 outline-none"
+        />
+
+        <div class="flex justify-end gap-3">
+          <button
+            @click="showModal = false"
+            class="px-4 py-2 border rounded"
+          >
+            Cancel
+          </button>
+
+          <button
+            v-if="!editingId"
+            @click="handleAddProject"
+            class="bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            Add
+          </button>
+
+          <button
+            v-else
+            @click="handleUpdate"
+            class="bg-green-600 text-white px-4 py-2 rounded"
+          >
+            Update
+          </button>
+        </div>
+      </div>
+    </BaseModal>
 
   </div>
 </template>
