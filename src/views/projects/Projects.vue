@@ -5,28 +5,35 @@ import type { Project } from '../../stores/projectStore'
 
 const projectStore = useProjectStore()
 
+/* -------------------- Form State -------------------- */
 const name = ref('')
 const description = ref('')
 const editingId = ref<number | null>(null)
 
+/* -------------------- Search + Filter -------------------- */
 const searchQuery = ref('')
 const debouncedSearch = ref('')
 const selectedStatus = ref<'all' | 'active' | 'completed'>('all')
+
+/* -------------------- Pagination -------------------- */
+const currentPage = ref(1)
+const itemsPerPage = 5
 
 onMounted(() => {
   projectStore.fetchProjects()
 })
 
-/* 🔹 Debounce Search */
+/* 🔹 Debounce */
 let timeout: any
 watch(searchQuery, (value) => {
   clearTimeout(timeout)
   timeout = setTimeout(() => {
     debouncedSearch.value = value
+    currentPage.value = 1
   }, 400)
 })
 
-/* 🔹 Filtered + Searched Projects */
+/* 🔹 Filtered */
 const filteredProjects = computed(() => {
   return projectStore.projects.filter(project => {
     const matchesSearch =
@@ -41,6 +48,22 @@ const filteredProjects = computed(() => {
   })
 })
 
+/* 🔹 Pagination Logic */
+const totalPages = computed(() =>
+  Math.ceil(filteredProjects.value.length / itemsPerPage)
+)
+
+const paginatedProjects = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredProjects.value.slice(start, start + itemsPerPage)
+})
+
+function goToPage(page: number) {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+}
+
+/* -------------------- CRUD -------------------- */
 function handleAddProject() {
   if (!name.value.trim()) return
 
@@ -89,7 +112,7 @@ function resetForm() {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto">
+  <div class="max-w-6xl mx-auto">
 
     <!-- Header -->
     <div class="flex justify-between items-center mb-8">
@@ -102,18 +125,18 @@ function resetForm() {
       </span>
     </div>
 
-    <!-- Add / Edit Form -->
+    <!-- Form -->
     <div class="bg-white shadow-md rounded-lg p-6 mb-8">
       <div class="flex flex-col md:flex-row gap-4">
         <input
           v-model="name"
           placeholder="Project name"
-          class="border rounded px-4 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          class="border rounded px-4 py-2 flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
         />
         <input
           v-model="description"
           placeholder="Description"
-          class="border rounded px-4 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          class="border rounded px-4 py-2 flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
         />
 
         <button
@@ -138,13 +161,13 @@ function resetForm() {
     <div class="flex flex-col md:flex-row gap-4 mb-8">
       <input
         v-model="searchQuery"
-        placeholder="Search by name or description..."
-        class="border rounded px-4 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        placeholder="Search projects..."
+        class="border rounded px-4 py-2 flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
       />
 
       <select
         v-model="selectedStatus"
-        class="border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        class="border rounded px-4 py-2 focus:ring-2 focus:ring-blue-400 outline-none"
       >
         <option value="all">All Status</option>
         <option value="active">Active</option>
@@ -157,10 +180,10 @@ function resetForm() {
       Loading projects...
     </div>
 
-    <!-- Projects List -->
-    <div v-if="filteredProjects.length" class="space-y-6">
+    <!-- Project Cards -->
+    <div v-if="paginatedProjects.length" class="space-y-6">
       <div
-        v-for="project in filteredProjects"
+        v-for="project in paginatedProjects"
         :key="project.id"
         class="bg-white shadow-md rounded-lg p-6 flex flex-col md:flex-row justify-between gap-4"
       >
@@ -170,7 +193,6 @@ function resetForm() {
               {{ project.name }}
             </h3>
 
-            <!-- Status Badge -->
             <span
               :class="[
                 'text-xs px-3 py-1 rounded-full',
@@ -213,12 +235,46 @@ function resetForm() {
       </div>
     </div>
 
-    <!-- Empty State -->
+    <!-- Pagination -->
     <div
-      v-else
+      v-if="totalPages > 1"
+      class="flex justify-center gap-2 mt-10"
+    >
+      <button
+        @click="goToPage(currentPage - 1)"
+        class="px-3 py-1 border rounded"
+      >
+        Prev
+      </button>
+
+      <button
+        v-for="page in totalPages"
+        :key="page"
+        @click="goToPage(page)"
+        :class="[
+          'px-3 py-1 border rounded',
+          page === currentPage
+            ? 'bg-blue-600 text-white'
+            : 'bg-white'
+        ]"
+      >
+        {{ page }}
+      </button>
+
+      <button
+        @click="goToPage(currentPage + 1)"
+        class="px-3 py-1 border rounded"
+      >
+        Next
+      </button>
+    </div>
+
+    <!-- Empty -->
+    <div
+      v-if="!projectStore.loading && !filteredProjects.length"
       class="text-center text-gray-400 py-16 text-lg"
     >
-      🚀 No projects found. Start by adding a new project.
+      🚀 No projects found.
     </div>
 
   </div>
