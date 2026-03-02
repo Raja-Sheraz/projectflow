@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   modelValue: boolean
 }>()
 
@@ -12,23 +12,49 @@ function close() {
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="modelValue"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-    >
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 relative">
-
-        <!-- Close Button -->
-        <button
+    <transition name="fade">
+      <div
+        v-if="modelValue"
+        class="fixed inset-0 z-50 flex items-center justify-center"
+      >
+        <!-- Overlay -->
+        <div
+          class="absolute inset-0 bg-black/40 backdrop-blur-sm"
           @click="close"
-          class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-lg"
-        >
-          ✕
-        </button>
+        ></div>
 
-        <!-- Slot Content -->
-        <slot />
+        <!-- Modal Box -->
+        <div
+          class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 animate-scale"
+        >
+          <slot />
+        </div>
       </div>
-    </div>
+    </transition>
   </Teleport>
 </template>
+
+<style>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes scale {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-scale {
+  animation: scale 0.2s ease;
+}
+</style>

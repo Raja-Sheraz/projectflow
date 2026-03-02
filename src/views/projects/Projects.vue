@@ -6,18 +6,18 @@ import BaseModal from '../../components/BaseModal.vue'
 
 const projectStore = useProjectStore()
 
-/* -------------------- Form State -------------------- */
+/* ---------------- Form State ---------------- */
 const name = ref('')
 const description = ref('')
 const editingId = ref<number | null>(null)
 const showModal = ref(false)
 
-/* -------------------- Search + Filter -------------------- */
+/* ---------------- Search & Filter ---------------- */
 const searchQuery = ref('')
 const debouncedSearch = ref('')
 const selectedStatus = ref<'all' | 'active' | 'completed'>('all')
 
-/* -------------------- Pagination -------------------- */
+/* ---------------- Pagination ---------------- */
 const currentPage = ref(1)
 const itemsPerPage = 5
 
@@ -25,7 +25,7 @@ onMounted(() => {
   projectStore.fetchProjects()
 })
 
-/* 🔹 Debounce */
+/* Debounce Search */
 let timeout: any
 watch(searchQuery, (value) => {
   clearTimeout(timeout)
@@ -35,7 +35,12 @@ watch(searchQuery, (value) => {
   }, 400)
 })
 
-/* 🔹 Filter */
+/* Reset page on status change */
+watch(selectedStatus, () => {
+  currentPage.value = 1
+})
+
+/* Filter */
 const filteredProjects = computed(() => {
   return projectStore.projects.filter(project => {
     const matchesSearch =
@@ -50,12 +55,14 @@ const filteredProjects = computed(() => {
   })
 })
 
-/* 🔹 Pagination */
+/* Total Count */
+const totalCount = computed(() => filteredProjects.value.length)
+
+/* Pagination */
 const totalPages = computed(() =>
   Math.ceil(filteredProjects.value.length / itemsPerPage)
 )
 
-/* 🔹 Fix Pagination Edge Case */
 watch(totalPages, (newTotal) => {
   if (currentPage.value > newTotal) {
     currentPage.value = newTotal || 1
@@ -72,7 +79,7 @@ function goToPage(page: number) {
   currentPage.value = page
 }
 
-/* -------------------- CRUD -------------------- */
+/* ---------------- CRUD ---------------- */
 function handleAddProject() {
   if (!name.value.trim()) return
 
@@ -123,23 +130,26 @@ function resetForm() {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto">
+  <div class="max-w-6xl mx-auto px-4">
 
     <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
-      <h2 class="text-3xl font-bold text-gray-800">
-        Projects
-      </h2>
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+      <div>
+        <h2 class="text-3xl font-bold text-gray-800">Projects</h2>
+        <p class="text-sm text-gray-500 mt-1">
+          Total: {{ totalCount }}
+        </p>
+      </div>
 
       <button
         @click="showModal = true"
-        class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+        class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"
       >
-        Add Project
+        + Add Project
       </button>
     </div>
 
-    <!-- Search + Filter -->
+    <!-- Search & Filter -->
     <div class="flex flex-col md:flex-row gap-4 mb-8">
       <input
         v-model="searchQuery"
@@ -157,12 +167,12 @@ function resetForm() {
       </select>
     </div>
 
-    <!-- Project Cards -->
+    <!-- Cards -->
     <div v-if="paginatedProjects.length" class="space-y-6">
       <div
         v-for="project in paginatedProjects"
         :key="project.id"
-        class="bg-white shadow-md rounded-lg p-6 flex justify-between items-center"
+        class="bg-white shadow-md rounded-xl p-6 flex justify-between items-center"
       >
         <div>
           <div class="flex items-center gap-3 mb-2">
@@ -212,6 +222,14 @@ function resetForm() {
       </div>
     </div>
 
+    <!-- Empty State -->
+    <div
+      v-if="!projectStore.loading && !filteredProjects.length"
+      class="text-center text-gray-400 py-16 text-lg"
+    >
+      🚀 No projects found.
+    </div>
+
     <!-- Pagination -->
     <div
       v-if="totalPages > 1"
@@ -246,14 +264,6 @@ function resetForm() {
       </button>
     </div>
 
-    <!-- Empty -->
-    <div
-      v-if="!projectStore.loading && !filteredProjects.length"
-      class="text-center text-gray-400 py-16 text-lg"
-    >
-      🚀 No projects found.
-    </div>
-
     <!-- Modal -->
     <BaseModal v-model="showModal">
       <h2 class="text-xl font-semibold mb-4">
@@ -264,18 +274,18 @@ function resetForm() {
         <input
           v-model="name"
           placeholder="Project name"
-          class="border rounded px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 outline-none"
+          class="border rounded px-4 py-2 w-full"
         />
 
         <input
           v-model="description"
           placeholder="Description"
-          class="border rounded px-4 py-2 w-full focus:ring-2 focus:ring-blue-400 outline-none"
+          class="border rounded px-4 py-2 w-full"
         />
 
         <div class="flex justify-end gap-3">
           <button
-            @click="showModal = false"
+            @click="resetForm"
             class="px-4 py-2 border rounded"
           >
             Cancel
