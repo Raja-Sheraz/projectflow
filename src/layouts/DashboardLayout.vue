@@ -23,15 +23,6 @@ function logout() {
           Dashboard
         </RouterLink>
 
-        <!-- Role based UI -->
-        <!-- <RouterLink
-          v-if="authStore.user?.role === 'admin'"
-          to="/projects"
-          class="block hover:text-blue-500"
-        >
-          Projects
-        </RouterLink> -->
-
         <RouterLink
         to="/dashboard/projects"
         class="block hover:text-blue-500"
