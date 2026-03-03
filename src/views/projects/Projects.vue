@@ -3,6 +3,7 @@ import { onMounted, ref, computed, watch } from 'vue'
 import { useProjectStore } from '../../stores/projectStore'
 import type { Project } from '../../stores/projectStore'
 import BaseModal from '../../components/BaseModal.vue'
+import { useDebounce } from '../../composables/useDebounce'
 
 const projectStore = useProjectStore()
 
@@ -14,8 +15,10 @@ const showModal = ref(false)
 
 /* ---------------- Search & Filter ---------------- */
 const searchQuery = ref('')
-const debouncedSearch = ref('')
 const selectedStatus = ref<'all' | 'active' | 'completed'>('all')
+
+/* 🔥 Use Composable Debounce */
+const debouncedSearch = useDebounce(() => searchQuery.value, 400)
 
 /* ---------------- Pagination ---------------- */
 const currentPage = ref(1)
@@ -23,16 +26,6 @@ const itemsPerPage = 5
 
 onMounted(() => {
   projectStore.fetchProjects()
-})
-
-/* Debounce Search */
-let timeout: any
-watch(searchQuery, (value) => {
-  clearTimeout(timeout)
-  timeout = setTimeout(() => {
-    debouncedSearch.value = value
-    currentPage.value = 1
-  }, 400)
 })
 
 /* Reset page on status change */
@@ -80,10 +73,10 @@ function goToPage(page: number) {
 }
 
 /* ---------------- CRUD ---------------- */
-function handleAddProject() {
+async function handleAddProject() {
   if (!name.value.trim()) return
 
-  projectStore.addProject({
+  await projectStore.addProject({
     name: name.value,
     description: description.value,
     status: 'active'
@@ -99,13 +92,13 @@ function startEdit(project: Project) {
   showModal.value = true
 }
 
-function handleUpdate() {
+async function handleUpdate() {
   if (!editingId.value) return
 
   const existing = projectStore.projects.find(p => p.id === editingId.value)
   if (!existing) return
 
-  projectStore.updateProject({
+  await projectStore.updateProject({
     ...existing,
     name: name.value,
     description: description.value
@@ -114,8 +107,8 @@ function handleUpdate() {
   resetForm()
 }
 
-function toggleStatus(project: Project) {
-  projectStore.updateProject({
+async function toggleStatus(project: Project) {
+  await projectStore.updateProject({
     ...project,
     status: project.status === 'active' ? 'completed' : 'active'
   })
@@ -128,6 +121,7 @@ function resetForm() {
   showModal.value = false
 }
 </script>
+
 
 <template>
   <div class="max-w-6xl mx-auto px-4">
