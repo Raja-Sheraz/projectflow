@@ -2,11 +2,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTaskStore } from '../../stores/taskStore'
+import { useUserStore } from '../../stores/userStore'
 import draggable from 'vuedraggable'
 import type { Task } from '../../stores/taskStore'
 
 const route = useRoute()
 const taskStore = useTaskStore()
+const userStore = useUserStore()
+
 const projectId = Number(route.params.projectId)
 
 const title = ref('')
@@ -16,63 +19,79 @@ onMounted(() => {
   taskStore.fetchTasks()
 })
 
-/* ----------------------------------------
-   Writable Computed Columns (REAL FIX)
------------------------------------------ */
+/* ---------------- Filter Project Tasks ---------------- */
 
-function createColumn(status: Task['status']) {
-  return computed<Task[]>({
-    get() {
-      return taskStore.tasks.filter(
-        t => t.projectId === projectId && t.status === status
-      )
-    },
-    set(newTasks) {
-      newTasks.forEach(task => {
-        if (task.status !== status) {
-          taskStore.updateTask({
-            ...task,
-            status
-          })
-        }
-      })
-    }
-  })
-}
+const projectTasks = computed(() =>
+  taskStore.tasks.filter(t => t.projectId === projectId)
+)
 
-const todoTasks = createColumn('todo')
-const inProgressTasks = createColumn('in-progress')
-const doneTasks = createColumn('done')
+const todoTasks = computed(() =>
+  projectTasks.value.filter(t => t.status === 'todo')
+)
 
-/* ----------------------------------------
-   Add Task
------------------------------------------ */
+const inProgressTasks = computed(() =>
+  projectTasks.value.filter(t => t.status === 'in-progress')
+)
 
-function addTask() {
+const doneTasks = computed(() =>
+  projectTasks.value.filter(t => t.status === 'done')
+)
+
+/* ---------------- Add Task ---------------- */
+
+async function addTask() {
   if (!title.value.trim()) return
 
-  taskStore.addTask({
+  await taskStore.addTask({
     projectId,
     title: title.value,
     description: description.value,
-    status: 'todo'
+    status: 'todo',
+    assignedTo: null
   })
 
   title.value = ''
   description.value = ''
 }
 
-/* ----------------------------------------
-   Manual Move
------------------------------------------ */
+/* ---------------- Drag Change ---------------- */
 
-function moveTask(task: Task, status: Task['status']) {
-  if (task.status === status) return
+async function handleChange(event: any, newStatus: Task['status']) {
+  if (event.added) {
+    const movedTask = event.added.element
 
-  taskStore.updateTask({
+    await taskStore.updateTask({
+      ...movedTask,
+      status: newStatus
+    })
+  }
+}
+
+function onTodoChange(event: any) {
+  handleChange(event, 'todo')
+}
+
+function onInProgressChange(event: any) {
+  handleChange(event, 'in-progress')
+}
+
+function onDoneChange(event: any) {
+  handleChange(event, 'done')
+}
+
+/* ---------------- Manual Move ---------------- */
+
+async function moveTask(task: Task, status: Task['status']) {
+  await taskStore.updateTask({
     ...task,
     status
   })
+}
+
+/* ---------------- Assignment Update ---------------- */
+
+async function updateAssignment(task: Task) {
+  await taskStore.updateTask({ ...task })
 }
 </script>
 
@@ -108,13 +127,12 @@ function moveTask(task: Task, status: Task['status']) {
         <h3 class="font-semibold mb-4">Todo</h3>
 
         <draggable
-          v-model="todoTasks"
+          :list="todoTasks"
           :group="{ name: 'tasks', pull: true, put: true }"
           item-key="id"
           animation="200"
           ghost-class="opacity-40"
-          chosen-class="scale-105"
-          drag-class="rotate-1"
+          @change="onTodoChange"
         >
           <template #item="{ element }">
             <div class="bg-white p-4 rounded-lg shadow mb-3">
@@ -123,7 +141,22 @@ function moveTask(task: Task, status: Task['status']) {
                 {{ element.description }}
               </p>
 
-              <div class="flex justify-end gap-3 text-xs">
+              <select
+                v-model="element.assignedTo"
+                @change="updateAssignment(element)"
+                class="border rounded px-2 py-1 text-sm w-full mb-2"
+              >
+                <option :value="null">Unassigned</option>
+                <option
+                  v-for="user in userStore.users"
+                  :key="user.id"
+                  :value="user.id"
+                >
+                  {{ user.name }}
+                </option>
+              </select>
+
+              <div class="flex justify-between text-xs">
                 <button
                   @click="moveTask(element, 'in-progress')"
                   class="text-yellow-600 hover:underline"
@@ -147,13 +180,12 @@ function moveTask(task: Task, status: Task['status']) {
         <h3 class="font-semibold mb-4">In Progress</h3>
 
         <draggable
-          v-model="inProgressTasks"
+          :list="inProgressTasks"
           :group="{ name: 'tasks', pull: true, put: true }"
           item-key="id"
           animation="200"
           ghost-class="opacity-40"
-          chosen-class="scale-105"
-          drag-class="rotate-1"
+          @change="onInProgressChange"
         >
           <template #item="{ element }">
             <div class="bg-white p-4 rounded-lg shadow mb-3">
@@ -161,6 +193,21 @@ function moveTask(task: Task, status: Task['status']) {
               <p class="text-sm text-gray-500 mb-3">
                 {{ element.description }}
               </p>
+
+              <select
+                v-model="element.assignedTo"
+                @change="updateAssignment(element)"
+                class="border rounded px-2 py-1 text-sm w-full mb-2"
+              >
+                <option :value="null">Unassigned</option>
+                <option
+                  v-for="user in userStore.users"
+                  :key="user.id"
+                  :value="user.id"
+                >
+                  {{ user.name }}
+                </option>
+              </select>
 
               <div class="flex justify-between text-xs">
                 <button
@@ -186,13 +233,12 @@ function moveTask(task: Task, status: Task['status']) {
         <h3 class="font-semibold mb-4">Done</h3>
 
         <draggable
-          v-model="doneTasks"
+          :list="doneTasks"
           :group="{ name: 'tasks', pull: true, put: true }"
           item-key="id"
           animation="200"
           ghost-class="opacity-40"
-          chosen-class="scale-105"
-          drag-class="rotate-1"
+          @change="onDoneChange"
         >
           <template #item="{ element }">
             <div class="bg-white p-4 rounded-lg shadow mb-3">
@@ -201,7 +247,22 @@ function moveTask(task: Task, status: Task['status']) {
                 {{ element.description }}
               </p>
 
-              <div class="flex justify-start gap-3 text-xs">
+              <select
+                v-model="element.assignedTo"
+                @change="updateAssignment(element)"
+                class="border rounded px-2 py-1 text-sm w-full mb-2"
+              >
+                <option :value="null">Unassigned</option>
+                <option
+                  v-for="user in userStore.users"
+                  :key="user.id"
+                  :value="user.id"
+                >
+                  {{ user.name }}
+                </option>
+              </select>
+
+              <div class="flex justify-between text-xs">
                 <button
                   @click="moveTask(element, 'todo')"
                   class="text-blue-600 hover:underline"

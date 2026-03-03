@@ -8,6 +8,7 @@ export interface Task {
   title: string
   description: string
   status: 'todo' | 'in-progress' | 'done'
+  assignedTo: number | null
 }
 
 export const useTaskStore = defineStore('tasks', () => {
@@ -16,10 +17,16 @@ export const useTaskStore = defineStore('tasks', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  /* Getter */
+  /* ---------------- Getters ---------------- */
+
   const totalTasks = computed(() => tasks.value.length)
 
-  /* Fetch */
+  function getTasksByProject(projectId: number) {
+    return tasks.value.filter(t => t.projectId === projectId)
+  }
+
+  /* ---------------- Fetch ---------------- */
+
   async function fetchTasks() {
     loading.value = true
     error.value = null
@@ -33,7 +40,8 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  /* Add (NO REFRESH) */
+  /* ---------------- Add ---------------- */
+
   async function addTask(taskData: Omit<Task, 'id'>) {
     const newTask: Task = {
       id: Date.now(),
@@ -42,11 +50,11 @@ export const useTaskStore = defineStore('tasks', () => {
 
     await taskService.createTask(newTask)
 
-    // 🔥 update locally instead of refetch
     tasks.value.push(newTask)
   }
 
-  /* Update (NO REFRESH) */
+  /* ---------------- Update ---------------- */
+
   async function updateTask(updated: Task) {
     await taskService.updateTask(updated)
 
@@ -57,15 +65,11 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  /* Delete (NO REFRESH) */
+  /* ---------------- Delete ---------------- */
+
   async function deleteTask(id: number) {
     await taskService.deleteTask(id)
-
     tasks.value = tasks.value.filter(t => t.id !== id)
-  }
-
-  function getTasksByProject(projectId: number) {
-    return tasks.value.filter(t => t.projectId === projectId)
   }
 
   return {
