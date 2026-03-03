@@ -212,6 +212,13 @@ function resetForm() {
             Delete
           </button>
 
+          <RouterLink
+          :to="`/dashboard/projects/${project.id}`"
+          class="text-indigo-600 text-sm"
+          >
+            View Tasks
+          </RouterLink>
+
           <button
             @click="toggleStatus(project)"
             class="text-purple-600 hover:text-purple-800 text-sm"

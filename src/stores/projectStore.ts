@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { projectService } from '../services/projectService'
 
 export interface Project {
   id: number
@@ -22,45 +23,38 @@ export const useProjectStore = defineStore('projects', () => {
   // 🔹 Actions
 
   // Simulate API fetch
-  async function fetchProjects() {
-    loading.value = true
-    error.value = null
+ async function fetchProjects() {
+  loading.value = true
+  error.value = null
 
-    try {
-      await new Promise(resolve => setTimeout(resolve, 800))
+  try {
+    projects.value = await projectService.fetchProjects()
+  } catch (err) {
+    error.value = 'Failed to load projects'
+  } finally {
+    loading.value = false
+  }
+}
 
-      const saved = localStorage.getItem('projects')
-      projects.value = saved ? JSON.parse(saved) : []
-    } catch (err) {
-      error.value = 'Failed to load projects'
-    } finally {
-      loading.value = false
-    }
+async function addProject(projectData: Omit<Project, 'id' | 'createdAt'>) {
+  const newProject: Project = {
+    id: Date.now(),
+    createdAt: new Date().toISOString(),
+    ...projectData
   }
 
-  function addProject(project: Omit<Project, 'id' | 'createdAt'>) {
-    const newProject: Project = {
-      id: Date.now(),
-      createdAt: new Date().toISOString(),
-      ...project
-    }
+  await projectService.createProject(newProject)
+  await fetchProjects()
+}
 
-    projects.value.push(newProject)
-    localStorage.setItem('projects', JSON.stringify(projects.value))
-  }
+async function updateProject(updated: Project) {
+  await projectService.updateProject(updated)
+  await fetchProjects()
+}
 
-  function deleteProject(id: number) {
-    projects.value = projects.value.filter(p => p.id !== id)
-    localStorage.setItem('projects', JSON.stringify(projects.value))
-  }
-
-  function updateProject(updatedProject: Project) {
-  const index = projects.value.findIndex(p => p.id === updatedProject.id)
-
-  if (index !== -1) {
-    projects.value[index] = updatedProject
-    localStorage.setItem('projects', JSON.stringify(projects.value))
-  }
+async function deleteProject(id: number) {
+  await projectService.deleteProject(id)
+  await fetchProjects()
 }
 
 return {
