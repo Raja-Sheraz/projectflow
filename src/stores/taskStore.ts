@@ -17,15 +17,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  /* ---------------- Getters ---------------- */
-
   const totalTasks = computed(() => tasks.value.length)
-
-  function getTasksByProject(projectId: number) {
-    return tasks.value.filter(t => t.projectId === projectId)
-  }
-
-  /* ---------------- Fetch ---------------- */
 
   async function fetchTasks() {
     loading.value = true
@@ -40,8 +32,6 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  /* ---------------- Add ---------------- */
-
   async function addTask(taskData: Omit<Task, 'id'>) {
     const newTask: Task = {
       id: Date.now(),
@@ -50,10 +40,9 @@ export const useTaskStore = defineStore('tasks', () => {
 
     await taskService.createTask(newTask)
 
+    // 🔥 update local state
     tasks.value.push(newTask)
   }
-
-  /* ---------------- Update ---------------- */
 
   async function updateTask(updated: Task) {
     await taskService.updateTask(updated)
@@ -61,15 +50,25 @@ export const useTaskStore = defineStore('tasks', () => {
     const index = tasks.value.findIndex(t => t.id === updated.id)
 
     if (index !== -1) {
-      tasks.value[index] = { ...updated }
+      tasks.value[index] = {
+        id: updated.id,
+        projectId: updated.projectId,
+        title: updated.title,
+        description: updated.description,
+        status: updated.status,
+        assignedTo: updated.assignedTo ?? null
+      }
     }
   }
 
-  /* ---------------- Delete ---------------- */
-
   async function deleteTask(id: number) {
     await taskService.deleteTask(id)
+
     tasks.value = tasks.value.filter(t => t.id !== id)
+  }
+
+  function getTasksByProject(projectId: number) {
+    return tasks.value.filter(t => t.projectId === projectId)
   }
 
   return {

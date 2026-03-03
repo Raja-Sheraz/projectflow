@@ -1,48 +1,35 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import draggable from 'vuedraggable'
+
 import { useTaskStore } from '../../stores/taskStore'
 import { useUserStore } from '../../stores/userStore'
-import draggable from 'vuedraggable'
 import type { Task } from '../../stores/taskStore'
 
-const route = useRoute()
+/* ---------------- Stores ---------------- */
 const taskStore = useTaskStore()
 const userStore = useUserStore()
 
+/* ---------------- Route ---------------- */
+const route = useRoute()
 const projectId = Number(route.params.projectId)
 
+/* ---------------- Form ---------------- */
 const title = ref('')
 const description = ref('')
 
+/* ---------------- Mounted ---------------- */
 onMounted(() => {
   taskStore.fetchTasks()
+  userStore.fetchUsers()
 })
 
-/* ---------------- Filter Project Tasks ---------------- */
-
-const projectTasks = computed(() =>
-  taskStore.tasks.filter(t => t.projectId === projectId)
-)
-
-const todoTasks = computed(() =>
-  projectTasks.value.filter(t => t.status === 'todo')
-)
-
-const inProgressTasks = computed(() =>
-  projectTasks.value.filter(t => t.status === 'in-progress')
-)
-
-const doneTasks = computed(() =>
-  projectTasks.value.filter(t => t.status === 'done')
-)
-
 /* ---------------- Add Task ---------------- */
-
-async function addTask() {
+function addTask() {
   if (!title.value.trim()) return
 
-  await taskStore.addTask({
+  taskStore.addTask({
     projectId,
     title: title.value,
     description: description.value,
@@ -54,45 +41,58 @@ async function addTask() {
   description.value = ''
 }
 
-/* ---------------- Drag Change ---------------- */
-
-async function handleChange(event: any, newStatus: Task['status']) {
-  if (event.added) {
-    const movedTask = event.added.element
-
-    await taskStore.updateTask({
-      ...movedTask,
-      status: newStatus
-    })
-  }
-}
-
-function onTodoChange(event: any) {
-  handleChange(event, 'todo')
-}
-
-function onInProgressChange(event: any) {
-  handleChange(event, 'in-progress')
-}
-
-function onDoneChange(event: any) {
-  handleChange(event, 'done')
-}
-
 /* ---------------- Manual Move ---------------- */
+function moveTask(task: Task, status: Task['status']) {
+  if (task.status === status) return
 
-async function moveTask(task: Task, status: Task['status']) {
-  await taskStore.updateTask({
+  taskStore.updateTask({
     ...task,
     status
   })
 }
 
-/* ---------------- Assignment Update ---------------- */
+/* ---------------- Drag Change Handler ---------------- */
+function handleChange(event: any, newStatus: Task['status']) {
+  if (event?.added) {
+    const task = event.added.element
 
-async function updateAssignment(task: Task) {
-  await taskStore.updateTask({ ...task })
+    taskStore.updateTask({
+      ...task,
+      status: newStatus
+    })
+  }
 }
+
+function onTodoChange(e: any) {
+  handleChange(e, 'todo')
+}
+
+function onInProgressChange(e: any) {
+  handleChange(e, 'in-progress')
+}
+
+function onDoneChange(e: any) {
+  handleChange(e, 'done')
+}
+
+/* ---------------- Columns ---------------- */
+const todoTasks = computed(() =>
+  taskStore.tasks.filter(
+    t => t.projectId === projectId && t.status === 'todo'
+  )
+)
+
+const inProgressTasks = computed(() =>
+  taskStore.tasks.filter(
+    t => t.projectId === projectId && t.status === 'in-progress'
+  )
+)
+
+const doneTasks = computed(() =>
+  taskStore.tasks.filter(
+    t => t.projectId === projectId && t.status === 'done'
+  )
+)
 </script>
 
 <template>
@@ -106,11 +106,13 @@ async function updateAssignment(task: Task) {
         placeholder="Task title"
         class="border rounded px-3 py-2 flex-1"
       />
+
       <input
         v-model="description"
         placeholder="Description"
         class="border rounded px-3 py-2 flex-1"
       />
+
       <button
         @click="addTask"
         class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
@@ -137,16 +139,20 @@ async function updateAssignment(task: Task) {
           <template #item="{ element }">
             <div class="bg-white p-4 rounded-lg shadow mb-3">
               <h4 class="font-medium">{{ element.title }}</h4>
-              <p class="text-sm text-gray-500 mb-3">
+              <p class="text-sm text-gray-500 mb-2">
                 {{ element.description }}
               </p>
 
+              <!-- Assign User -->
               <select
-                v-model="element.assignedTo"
-                @change="updateAssignment(element)"
+                :value="element.assignedTo ?? ''"
+                @change="taskStore.updateTask({
+                  ...element,
+                  assignedTo: Number(($event.target as HTMLSelectElement).value) || null
+                })"
                 class="border rounded px-2 py-1 text-sm w-full mb-2"
               >
-                <option :value="null">Unassigned</option>
+                <option value="">Unassigned</option>
                 <option
                   v-for="user in userStore.users"
                   :key="user.id"
@@ -156,7 +162,7 @@ async function updateAssignment(task: Task) {
                 </option>
               </select>
 
-              <div class="flex justify-between text-xs">
+              <div class="flex justify-end gap-3 text-xs">
                 <button
                   @click="moveTask(element, 'in-progress')"
                   class="text-yellow-600 hover:underline"
@@ -190,16 +196,19 @@ async function updateAssignment(task: Task) {
           <template #item="{ element }">
             <div class="bg-white p-4 rounded-lg shadow mb-3">
               <h4 class="font-medium">{{ element.title }}</h4>
-              <p class="text-sm text-gray-500 mb-3">
+              <p class="text-sm text-gray-500 mb-2">
                 {{ element.description }}
               </p>
 
               <select
-                v-model="element.assignedTo"
-                @change="updateAssignment(element)"
+                :value="element.assignedTo ?? ''"
+                @change="taskStore.updateTask({
+                  ...element,
+                  assignedTo: Number(($event.target as HTMLSelectElement).value) || null
+                })"
                 class="border rounded px-2 py-1 text-sm w-full mb-2"
               >
-                <option :value="null">Unassigned</option>
+                <option value="">Unassigned</option>
                 <option
                   v-for="user in userStore.users"
                   :key="user.id"
@@ -243,16 +252,19 @@ async function updateAssignment(task: Task) {
           <template #item="{ element }">
             <div class="bg-white p-4 rounded-lg shadow mb-3">
               <h4 class="font-medium">{{ element.title }}</h4>
-              <p class="text-sm text-gray-500 mb-3">
+              <p class="text-sm text-gray-500 mb-2">
                 {{ element.description }}
               </p>
 
               <select
-                v-model="element.assignedTo"
-                @change="updateAssignment(element)"
+                :value="element.assignedTo ?? ''"
+                @change="taskStore.updateTask({
+                  ...element,
+                  assignedTo: Number(($event.target as HTMLSelectElement).value) || null
+                })"
                 class="border rounded px-2 py-1 text-sm w-full mb-2"
               >
-                <option :value="null">Unassigned</option>
+                <option value="">Unassigned</option>
                 <option
                   v-for="user in userStore.users"
                   :key="user.id"
@@ -262,7 +274,7 @@ async function updateAssignment(task: Task) {
                 </option>
               </select>
 
-              <div class="flex justify-between text-xs">
+              <div class="flex justify-start gap-3 text-xs">
                 <button
                   @click="moveTask(element, 'todo')"
                   class="text-blue-600 hover:underline"
