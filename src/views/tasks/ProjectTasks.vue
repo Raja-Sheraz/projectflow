@@ -2,13 +2,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTaskStore } from '../../stores/taskStore'
-import { useProjectStore } from '../../stores/projectStore'
+import draggable from 'vuedraggable'
 import type { Task } from '../../stores/taskStore'
 
 const route = useRoute()
 const taskStore = useTaskStore()
-const projectStore = useProjectStore()
-
 const projectId = Number(route.params.projectId)
 
 const title = ref('')
@@ -18,28 +16,37 @@ onMounted(() => {
   taskStore.fetchTasks()
 })
 
-/* Get current project */
-const currentProject = computed(() =>
-  projectStore.projects.find(p => p.id === projectId)
-)
+/* ----------------------------------------
+   Writable Computed Columns (REAL FIX)
+----------------------------------------- */
 
-/* All tasks of this project */
-const projectTasks = computed(() =>
-  taskStore.getTasksByProject(projectId)
-)
+function createColumn(status: Task['status']) {
+  return computed<Task[]>({
+    get() {
+      return taskStore.tasks.filter(
+        t => t.projectId === projectId && t.status === status
+      )
+    },
+    set(newTasks) {
+      newTasks.forEach(task => {
+        if (task.status !== status) {
+          taskStore.updateTask({
+            ...task,
+            status
+          })
+        }
+      })
+    }
+  })
+}
 
-/* Columns */
-const todoTasks = computed(() =>
-  projectTasks.value.filter(t => t.status === 'todo')
-)
+const todoTasks = createColumn('todo')
+const inProgressTasks = createColumn('in-progress')
+const doneTasks = createColumn('done')
 
-const inProgressTasks = computed(() =>
-  projectTasks.value.filter(t => t.status === 'in-progress')
-)
-
-const doneTasks = computed(() =>
-  projectTasks.value.filter(t => t.status === 'done')
-)
+/* ----------------------------------------
+   Add Task
+----------------------------------------- */
 
 function addTask() {
   if (!title.value.trim()) return
@@ -55,29 +62,26 @@ function addTask() {
   description.value = ''
 }
 
-function moveTask(task: Task, newStatus: Task['status']) {
+/* ----------------------------------------
+   Manual Move
+----------------------------------------- */
+
+function moveTask(task: Task, status: Task['status']) {
+  if (task.status === status) return
+
   taskStore.updateTask({
     ...task,
-    status: newStatus
+    status
   })
 }
 </script>
 
 <template>
   <div class="max-w-7xl mx-auto px-4">
-
-    <!-- Header -->
-    <div class="mb-8">
-      <h2 class="text-3xl font-bold text-gray-800">
-        {{ currentProject?.name || 'Project' }} Tasks
-      </h2>
-      <p class="text-sm text-gray-500 mt-1">
-        Manage tasks efficiently using Kanban workflow
-      </p>
-    </div>
+    <h2 class="text-2xl font-bold mb-6">Project Tasks</h2>
 
     <!-- Add Task -->
-    <div class="bg-white shadow rounded-xl p-4 mb-8 flex flex-col md:flex-row gap-4">
+    <div class="bg-white shadow rounded-lg p-4 mb-6 flex gap-4">
       <input
         v-model="title"
         placeholder="Task title"
@@ -90,97 +94,132 @@ function moveTask(task: Task, newStatus: Task['status']) {
       />
       <button
         @click="addTask"
-        class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"
+        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
       >
         Add Task
       </button>
     </div>
 
-    <!-- Kanban -->
+    <!-- Columns -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
       <!-- TODO -->
-      <div class="bg-gray-100 rounded-xl p-4">
+      <div class="bg-gray-100 rounded-lg p-4">
         <h3 class="font-semibold mb-4">Todo</h3>
 
-        <div v-if="todoTasks.length">
-          <div
-            v-for="task in todoTasks"
-            :key="task.id"
-            class="bg-white p-4 rounded-lg shadow mb-3"
-          >
-            <h4 class="font-medium">{{ task.title }}</h4>
-            <p class="text-sm text-gray-500">{{ task.description }}</p>
+        <draggable
+          v-model="todoTasks"
+          :group="{ name: 'tasks', pull: true, put: true }"
+          item-key="id"
+          animation="200"
+          ghost-class="opacity-40"
+          chosen-class="scale-105"
+          drag-class="rotate-1"
+        >
+          <template #item="{ element }">
+            <div class="bg-white p-4 rounded-lg shadow mb-3">
+              <h4 class="font-medium">{{ element.title }}</h4>
+              <p class="text-sm text-gray-500 mb-3">
+                {{ element.description }}
+              </p>
 
-            <button
-              @click="moveTask(task, 'in-progress')"
-              class="text-xs text-blue-600 mt-2"
-            >
-              Move → In Progress
-            </button>
-          </div>
-        </div>
-
-        <p v-else class="text-sm text-gray-400">
-          No tasks here
-        </p>
+              <div class="flex justify-end gap-3 text-xs">
+                <button
+                  @click="moveTask(element, 'in-progress')"
+                  class="text-yellow-600 hover:underline"
+                >
+                  In Progress →
+                </button>
+                <button
+                  @click="moveTask(element, 'done')"
+                  class="text-green-600 hover:underline"
+                >
+                  Done →
+                </button>
+              </div>
+            </div>
+          </template>
+        </draggable>
       </div>
 
       <!-- IN PROGRESS -->
-      <div class="bg-yellow-100 rounded-xl p-4">
+      <div class="bg-yellow-100 rounded-lg p-4">
         <h3 class="font-semibold mb-4">In Progress</h3>
 
-        <div v-if="inProgressTasks.length">
-          <div
-            v-for="task in inProgressTasks"
-            :key="task.id"
-            class="bg-white p-4 rounded-lg shadow mb-3"
-          >
-            <h4 class="font-medium">{{ task.title }}</h4>
-            <p class="text-sm text-gray-500">{{ task.description }}</p>
+        <draggable
+          v-model="inProgressTasks"
+          :group="{ name: 'tasks', pull: true, put: true }"
+          item-key="id"
+          animation="200"
+          ghost-class="opacity-40"
+          chosen-class="scale-105"
+          drag-class="rotate-1"
+        >
+          <template #item="{ element }">
+            <div class="bg-white p-4 rounded-lg shadow mb-3">
+              <h4 class="font-medium">{{ element.title }}</h4>
+              <p class="text-sm text-gray-500 mb-3">
+                {{ element.description }}
+              </p>
 
-            <button
-              @click="moveTask(task, 'done')"
-              class="text-xs text-green-600 mt-2"
-            >
-              Move → Done
-            </button>
-          </div>
-        </div>
-
-        <p v-else class="text-sm text-gray-400">
-          No tasks here
-        </p>
+              <div class="flex justify-between text-xs">
+                <button
+                  @click="moveTask(element, 'todo')"
+                  class="text-blue-600 hover:underline"
+                >
+                  ← Todo
+                </button>
+                <button
+                  @click="moveTask(element, 'done')"
+                  class="text-green-600 hover:underline"
+                >
+                  Done →
+                </button>
+              </div>
+            </div>
+          </template>
+        </draggable>
       </div>
 
       <!-- DONE -->
-      <div class="bg-green-100 rounded-xl p-4">
+      <div class="bg-green-100 rounded-lg p-4">
         <h3 class="font-semibold mb-4">Done</h3>
 
-        <div v-if="doneTasks.length">
-          <div
-            v-for="task in doneTasks"
-            :key="task.id"
-            class="bg-white p-4 rounded-lg shadow mb-3"
-          >
-            <h4 class="font-medium">{{ task.title }}</h4>
-            <p class="text-sm text-gray-500">{{ task.description }}</p>
+        <draggable
+          v-model="doneTasks"
+          :group="{ name: 'tasks', pull: true, put: true }"
+          item-key="id"
+          animation="200"
+          ghost-class="opacity-40"
+          chosen-class="scale-105"
+          drag-class="rotate-1"
+        >
+          <template #item="{ element }">
+            <div class="bg-white p-4 rounded-lg shadow mb-3">
+              <h4 class="font-medium">{{ element.title }}</h4>
+              <p class="text-sm text-gray-500 mb-3">
+                {{ element.description }}
+              </p>
 
-            <button
-              @click="moveTask(task, 'todo')"
-              class="text-xs text-red-600 mt-2"
-            >
-              Move → Todo
-            </button>
-          </div>
-        </div>
-
-        <p v-else class="text-sm text-gray-400">
-          No tasks here
-        </p>
+              <div class="flex justify-start gap-3 text-xs">
+                <button
+                  @click="moveTask(element, 'todo')"
+                  class="text-blue-600 hover:underline"
+                >
+                  ← Todo
+                </button>
+                <button
+                  @click="moveTask(element, 'in-progress')"
+                  class="text-yellow-600 hover:underline"
+                >
+                  ← In Progress
+                </button>
+              </div>
+            </div>
+          </template>
+        </draggable>
       </div>
 
     </div>
-
   </div>
-</template> 
+</template>

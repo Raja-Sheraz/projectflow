@@ -33,7 +33,7 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
-  /* Add */
+  /* Add (NO REFRESH) */
   async function addTask(taskData: Omit<Task, 'id'>) {
     const newTask: Task = {
       id: Date.now(),
@@ -41,22 +41,29 @@ export const useTaskStore = defineStore('tasks', () => {
     }
 
     await taskService.createTask(newTask)
-    await fetchTasks()
+
+    // 🔥 update locally instead of refetch
+    tasks.value.push(newTask)
   }
 
-  /* Update */
+  /* Update (NO REFRESH) */
   async function updateTask(updated: Task) {
     await taskService.updateTask(updated)
-    await fetchTasks()
+
+    const index = tasks.value.findIndex(t => t.id === updated.id)
+
+    if (index !== -1) {
+      tasks.value[index] = { ...updated }
+    }
   }
 
-  /* Delete */
+  /* Delete (NO REFRESH) */
   async function deleteTask(id: number) {
     await taskService.deleteTask(id)
-    await fetchTasks()
+
+    tasks.value = tasks.value.filter(t => t.id !== id)
   }
 
-  /* Filter by Project */
   function getTasksByProject(projectId: number) {
     return tasks.value.filter(t => t.projectId === projectId)
   }
