@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { taskService } from '../services/taskService'
 
 export interface Task {
   id: number
@@ -12,44 +13,60 @@ export interface Task {
 export const useTaskStore = defineStore('tasks', () => {
 
   const tasks = ref<Task[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
 
-  function loadTasks() {
-    const saved = localStorage.getItem('tasks')
-    tasks.value = saved ? JSON.parse(saved) : []
-  }
+  /* Getter */
+  const totalTasks = computed(() => tasks.value.length)
 
-  function saveTasks() {
-    localStorage.setItem('tasks', JSON.stringify(tasks.value))
-  }
+  /* Fetch */
+  async function fetchTasks() {
+    loading.value = true
+    error.value = null
 
-  function addTask(task: Omit<Task, 'id'>) {
-    tasks.value.push({
-      id: Date.now(),
-      ...task
-    })
-    saveTasks()
-  }
-
-  function updateTask(updatedTask: Task) {
-    const index = tasks.value.findIndex(t => t.id === updatedTask.id)
-    if (index !== -1) {
-      tasks.value[index] = updatedTask
-      saveTasks()
+    try {
+      tasks.value = await taskService.fetchTasks()
+    } catch (err) {
+      error.value = 'Failed to load tasks'
+    } finally {
+      loading.value = false
     }
   }
 
-  function deleteTask(id: number) {
-    tasks.value = tasks.value.filter(t => t.id !== id)
-    saveTasks()
+  /* Add */
+  async function addTask(taskData: Omit<Task, 'id'>) {
+    const newTask: Task = {
+      id: Date.now(),
+      ...taskData
+    }
+
+    await taskService.createTask(newTask)
+    await fetchTasks()
   }
 
+  /* Update */
+  async function updateTask(updated: Task) {
+    await taskService.updateTask(updated)
+    await fetchTasks()
+  }
+
+  /* Delete */
+  async function deleteTask(id: number) {
+    await taskService.deleteTask(id)
+    await fetchTasks()
+  }
+
+  /* Filter by Project */
   function getTasksByProject(projectId: number) {
     return tasks.value.filter(t => t.projectId === projectId)
   }
 
   return {
     tasks,
-    loadTasks,
+    loading,
+    error,
+    totalTasks,
+    fetchTasks,
     addTask,
     updateTask,
     deleteTask,

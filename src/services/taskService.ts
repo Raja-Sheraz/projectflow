@@ -10,6 +10,8 @@ export const taskService = {
   },
 
   async createTask(task: Task) {
+    await new Promise(resolve => setTimeout(resolve, 200))
+
     const saved = localStorage.getItem('tasks')
     const tasks = saved ? JSON.parse(saved) : []
 
@@ -18,6 +20,8 @@ export const taskService = {
   },
 
   async updateTask(updated: Task) {
+    await new Promise(resolve => setTimeout(resolve, 200))
+
     const saved = localStorage.getItem('tasks')
     const tasks = saved ? JSON.parse(saved) : []
 
@@ -30,11 +34,12 @@ export const taskService = {
   },
 
   async deleteTask(id: number) {
+    await new Promise(resolve => setTimeout(resolve, 200))
+
     const saved = localStorage.getItem('tasks')
     const tasks = saved ? JSON.parse(saved) : []
 
     const filtered = tasks.filter((t: Task) => t.id !== id)
-
     localStorage.setItem('tasks', JSON.stringify(filtered))
   }
 }

@@ -15,8 +15,7 @@ const title = ref('')
 const description = ref('')
 
 onMounted(() => {
-  taskStore.loadTasks()
-  projectStore.fetchProjects()
+  taskStore.fetchTasks()
 })
 
 /* Get current project */
@@ -184,4 +183,4 @@ function moveTask(task: Task, newStatus: Task['status']) {
     </div>
 
   </div>
-</template>
+</template> 
