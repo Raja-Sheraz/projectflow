@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, onMounted } from "vue"
 import { useProjectStore } from "../stores/projectStore"
 import { useTaskStore } from "../stores/taskStore"
 
 const projectStore = useProjectStore()
 const taskStore = useTaskStore()
+
+onMounted(() => {
+  projectStore.fetchProjects()
+  taskStore.fetchTasks()
+})
 
 const totalProjects = computed(() => projectStore.projects.length)
 
