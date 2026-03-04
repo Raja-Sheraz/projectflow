@@ -5,16 +5,27 @@ import draggable from 'vuedraggable'
 
 import { useTaskStore } from '../../stores/taskStore'
 import { useUserStore } from '../../stores/userStore'
+import { useAuthStore } from '../../stores/authStore'
 import type { Task } from '../../stores/taskStore'
 
 /* ---------------- Stores ---------------- */
 const taskStore = useTaskStore()
 const userStore = useUserStore()
+const authStore = useAuthStore()
 
 /* ---------------- Route ---------------- */
 const route = useRoute()
 const projectId = Number(route.params.projectId)
 
+/* ---------------- Role ---------------- */
+
+const isAdmin = computed<boolean>(() => {
+  return authStore.user?.role === 'admin'
+})
+
+const currentUserId = computed<number | null>(() => {
+  return authStore.user?.id ?? null
+})
 /* ---------------- Form ---------------- */
 const title = ref('')
 const description = ref('')
@@ -52,13 +63,13 @@ function moveTask(task: Task, status: Task['status']) {
 }
 
 /* ---------------- Drag Change Handler ---------------- */
-function handleChange(event: any, newStatus: Task['status']) {
-  if (event?.added) {
-    const task = event.added.element
+function handleChange(evt: any, status: Task['status']) {
+  if (evt?.added) {
+    const task = evt.added.element
 
     taskStore.updateTask({
       ...task,
-      status: newStatus
+      status
     })
   }
 }
@@ -73,6 +84,16 @@ function onInProgressChange(e: any) {
 
 function onDoneChange(e: any) {
   handleChange(e, 'done')
+}
+
+/* ---------------- Assign Logic ---------------- */
+function handleAssign(task: Task, userId: number | null) {
+  if (!isAdmin.value && userId !== currentUserId.value) return
+
+  taskStore.updateTask({
+    ...task,
+    assignedTo: userId
+  })
 }
 
 /* ---------------- Columns ---------------- */
@@ -115,13 +136,12 @@ const doneTasks = computed(() =>
 
       <button
         @click="addTask"
-        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+        class="bg-blue-600 text-white px-4 py-2 rounded"
       >
         Add Task
       </button>
     </div>
 
-    <!-- Columns -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
       <!-- TODO -->
@@ -132,24 +152,21 @@ const doneTasks = computed(() =>
           :list="todoTasks"
           :group="{ name: 'tasks', pull: true, put: true }"
           item-key="id"
-          animation="200"
-          ghost-class="opacity-40"
           @change="onTodoChange"
         >
           <template #item="{ element }">
-            <div class="bg-white p-4 rounded-lg shadow mb-3">
+            <div class="bg-white p-4 rounded shadow mb-3">
               <h4 class="font-medium">{{ element.title }}</h4>
               <p class="text-sm text-gray-500 mb-2">
                 {{ element.description }}
               </p>
 
-              <!-- Assign User -->
               <select
                 :value="element.assignedTo ?? ''"
-                @change="taskStore.updateTask({
-                  ...element,
-                  assignedTo: Number(($event.target as HTMLSelectElement).value) || null
-                })"
+                @change="handleAssign(
+                  element,
+                  Number(($event.target as HTMLSelectElement).value) || null
+                )"
                 class="border rounded px-2 py-1 text-sm w-full mb-2"
               >
                 <option value="">Unassigned</option>
@@ -162,20 +179,29 @@ const doneTasks = computed(() =>
                 </option>
               </select>
 
-              <div class="flex justify-end gap-3 text-xs">
+              <div class="flex justify-between text-xs">
                 <button
                   @click="moveTask(element, 'in-progress')"
-                  class="text-yellow-600 hover:underline"
+                  class="text-yellow-600"
                 >
                   In Progress →
                 </button>
+
                 <button
                   @click="moveTask(element, 'done')"
-                  class="text-green-600 hover:underline"
+                  class="text-green-600"
                 >
                   Done →
                 </button>
               </div>
+
+              <button
+                v-if="isAdmin"
+                @click="taskStore.deleteTask(element.id)"
+                class="text-red-600 text-xs mt-2"
+              >
+                Delete
+              </button>
             </div>
           </template>
         </draggable>
@@ -189,12 +215,10 @@ const doneTasks = computed(() =>
           :list="inProgressTasks"
           :group="{ name: 'tasks', pull: true, put: true }"
           item-key="id"
-          animation="200"
-          ghost-class="opacity-40"
           @change="onInProgressChange"
         >
           <template #item="{ element }">
-            <div class="bg-white p-4 rounded-lg shadow mb-3">
+            <div class="bg-white p-4 rounded shadow mb-3">
               <h4 class="font-medium">{{ element.title }}</h4>
               <p class="text-sm text-gray-500 mb-2">
                 {{ element.description }}
@@ -202,10 +226,10 @@ const doneTasks = computed(() =>
 
               <select
                 :value="element.assignedTo ?? ''"
-                @change="taskStore.updateTask({
-                  ...element,
-                  assignedTo: Number(($event.target as HTMLSelectElement).value) || null
-                })"
+                @change="handleAssign(
+                  element,
+                  Number(($event.target as HTMLSelectElement).value) || null
+                )"
                 class="border rounded px-2 py-1 text-sm w-full mb-2"
               >
                 <option value="">Unassigned</option>
@@ -221,17 +245,26 @@ const doneTasks = computed(() =>
               <div class="flex justify-between text-xs">
                 <button
                   @click="moveTask(element, 'todo')"
-                  class="text-blue-600 hover:underline"
+                  class="text-blue-600"
                 >
                   ← Todo
                 </button>
+
                 <button
                   @click="moveTask(element, 'done')"
-                  class="text-green-600 hover:underline"
+                  class="text-green-600"
                 >
                   Done →
                 </button>
               </div>
+
+              <button
+                v-if="isAdmin"
+                @click="taskStore.deleteTask(element.id)"
+                class="text-red-600 text-xs mt-2"
+              >
+                Delete
+              </button>
             </div>
           </template>
         </draggable>
@@ -245,12 +278,10 @@ const doneTasks = computed(() =>
           :list="doneTasks"
           :group="{ name: 'tasks', pull: true, put: true }"
           item-key="id"
-          animation="200"
-          ghost-class="opacity-40"
           @change="onDoneChange"
         >
           <template #item="{ element }">
-            <div class="bg-white p-4 rounded-lg shadow mb-3">
+            <div class="bg-white p-4 rounded shadow mb-3">
               <h4 class="font-medium">{{ element.title }}</h4>
               <p class="text-sm text-gray-500 mb-2">
                 {{ element.description }}
@@ -258,10 +289,10 @@ const doneTasks = computed(() =>
 
               <select
                 :value="element.assignedTo ?? ''"
-                @change="taskStore.updateTask({
-                  ...element,
-                  assignedTo: Number(($event.target as HTMLSelectElement).value) || null
-                })"
+                @change="handleAssign(
+                  element,
+                  Number(($event.target as HTMLSelectElement).value) || null
+                )"
                 class="border rounded px-2 py-1 text-sm w-full mb-2"
               >
                 <option value="">Unassigned</option>
@@ -274,20 +305,29 @@ const doneTasks = computed(() =>
                 </option>
               </select>
 
-              <div class="flex justify-start gap-3 text-xs">
+              <div class="flex justify-between text-xs">
                 <button
                   @click="moveTask(element, 'todo')"
-                  class="text-blue-600 hover:underline"
+                  class="text-blue-600"
                 >
                   ← Todo
                 </button>
+
                 <button
                   @click="moveTask(element, 'in-progress')"
-                  class="text-yellow-600 hover:underline"
+                  class="text-yellow-600"
                 >
                   ← In Progress
                 </button>
               </div>
+
+              <button
+                v-if="isAdmin"
+                @click="taskStore.deleteTask(element.id)"
+                class="text-red-600 text-xs mt-2"
+              >
+                Delete
+              </button>
             </div>
           </template>
         </draggable>

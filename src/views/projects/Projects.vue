@@ -1,39 +1,38 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from "vue";
-import { useProjectStore } from "../../stores/projectStore";
-import type { Project } from "../../stores/projectStore";
-import BaseModal from "../../components/BaseModal.vue";
-import { useDebounce } from "../../composables/useDebounce";
+import { onMounted, ref, computed, watch } from "vue"
+import { useProjectStore } from "../../stores/projectStore"
+import type { Project } from "../../stores/projectStore"
+import BaseModal from "../../components/BaseModal.vue"
+import { useDebounce } from "../../composables/useDebounce"
 
-const projectStore = useProjectStore();
+/* ---------------- Store ---------------- */
+const projectStore = useProjectStore()
 
 /* ---------------- Form State ---------------- */
-const name = ref("");
-const description = ref("");
-const editingId = ref<number | null>(null);
-const showModal = ref(false);
+const name = ref("")
+const description = ref("")
+const editingId = ref<number | null>(null)
+const showModal = ref(false)
 
 /* ---------------- Search & Filter ---------------- */
-const searchQuery = ref("");
-const selectedStatus = ref<"all" | "active" | "completed">("all");
+const searchQuery = ref("")
+const selectedStatus = ref<"all" | "active" | "completed">("all")
 
-/* 🔥 Use Composable Debounce */
-const debouncedSearch = useDebounce(() => searchQuery.value, 400);
+const debouncedSearch = useDebounce(() => searchQuery.value, 400)
 
 /* ---------------- Pagination ---------------- */
-const currentPage = ref(1);
-const itemsPerPage = 5;
+const currentPage = ref(1)
+const itemsPerPage = 5
 
 onMounted(() => {
-  projectStore.fetchProjects();
-});
+  projectStore.fetchProjects()
+})
 
-/* Reset page on status change */
 watch(selectedStatus, () => {
-  currentPage.value = 1;
-});
+  currentPage.value = 1
+})
 
-/* Filter */
+/* ---------------- Filtering ---------------- */
 const filteredProjects = computed(() => {
   return projectStore.projects.filter((project) => {
     const matchesSearch =
@@ -42,128 +41,140 @@ const filteredProjects = computed(() => {
         .includes(debouncedSearch.value.toLowerCase()) ||
       project.description
         .toLowerCase()
-        .includes(debouncedSearch.value.toLowerCase());
+        .includes(debouncedSearch.value.toLowerCase())
 
     const matchesStatus =
-      selectedStatus.value === "all" || project.status === selectedStatus.value;
+      selectedStatus.value === "all" ||
+      project.status === selectedStatus.value
 
-    return matchesSearch && matchesStatus;
-  });
-});
+    return matchesSearch && matchesStatus
+  })
+})
 
-/* Total Count */
-const totalCount = computed(() => filteredProjects.value.length);
+/* ---------------- Count ---------------- */
+const totalCount = computed(() => filteredProjects.value.length)
 
-/* Pagination */
+/* ---------------- Pagination ---------------- */
 const totalPages = computed(() =>
-  Math.ceil(filteredProjects.value.length / itemsPerPage),
-);
+  Math.ceil(filteredProjects.value.length / itemsPerPage)
+)
 
 watch(totalPages, (newTotal) => {
   if (currentPage.value > newTotal) {
-    currentPage.value = newTotal || 1;
+    currentPage.value = newTotal || 1
   }
-});
+})
 
 const paginatedProjects = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  return filteredProjects.value.slice(start, start + itemsPerPage);
-});
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredProjects.value.slice(start, start + itemsPerPage)
+})
 
 function goToPage(page: number) {
-  if (page < 1 || page > totalPages.value) return;
-  currentPage.value = page;
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
 }
 
 /* ---------------- Validation ---------------- */
 const errors = ref({
   name: "",
-  description: "",
-});
+  description: ""
+})
 
 const isFormValid = computed(() => {
-  return name.value.trim().length >= 3 && description.value.trim().length >= 5;
-});
+  return name.value.trim().length >= 3 &&
+         description.value.trim().length >= 5
+})
 
 watch(name, (val) => {
   if (!val.trim()) {
-    errors.value.name = "Project name is required";
+    errors.value.name = "Project name is required"
   } else if (val.trim().length < 3) {
-    errors.value.name = "Minimum 3 characters required";
+    errors.value.name = "Minimum 3 characters required"
   } else {
-    errors.value.name = "";
+    errors.value.name = ""
   }
-});
+})
 
 watch(description, (val) => {
   if (!val.trim()) {
-    errors.value.description = "Description is required";
+    errors.value.description = "Description is required"
   } else if (val.trim().length < 5) {
-    errors.value.description = "Minimum 5 characters required";
+    errors.value.description = "Minimum 5 characters required"
   } else {
-    errors.value.description = "";
+    errors.value.description = ""
   }
-});
+})
 
 /* ---------------- CRUD ---------------- */
 async function handleAddProject() {
-  if (!isFormValid.value) return;
+  if (!isFormValid.value) return
 
   await projectStore.addProject({
     name: name.value,
     description: description.value,
-    status: "active",
-  });
+    status: "active"
+  })
 
-  resetForm();
+  resetForm()
 }
 
 function startEdit(project: Project) {
-  editingId.value = project.id;
-  name.value = project.name;
-  description.value = project.description;
-  showModal.value = true;
+  editingId.value = project.id
+  name.value = project.name
+  description.value = project.description
+  showModal.value = true
 }
 
 async function handleUpdate() {
-  if (!editingId.value) return;
+  if (!editingId.value) return
 
-  const existing = projectStore.projects.find((p) => p.id === editingId.value);
-  if (!existing) return;
+  const existing = projectStore.projects.find(
+    p => p.id === editingId.value
+  )
+
+  if (!existing) return
 
   await projectStore.updateProject({
     ...existing,
     name: name.value,
-    description: description.value,
-  });
+    description: description.value
+  })
 
-  resetForm();
+  resetForm()
 }
 
 async function toggleStatus(project: Project) {
   await projectStore.updateProject({
     ...project,
-    status: project.status === "active" ? "completed" : "active",
-  });
+    status: project.status === "active"
+      ? "completed"
+      : "active"
+  })
+}
+
+async function deleteProject(id: number) {
+  await projectStore.deleteProject(id)
 }
 
 function resetForm() {
-  editingId.value = null;
-  name.value = "";
-  description.value = "";
-  showModal.value = false;
+  editingId.value = null
+  name.value = ""
+  description.value = ""
+  showModal.value = false
 }
 </script>
 
 <template>
   <div class="max-w-6xl mx-auto px-4">
+
     <!-- Header -->
-    <div
-      class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6"
-    >
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
       <div>
         <h2 class="text-3xl font-bold text-gray-800">Projects</h2>
-        <p class="text-sm text-gray-500 mt-1">Total: {{ totalCount }}</p>
+        <p class="text-sm text-gray-500 mt-1">
+          Total: {{ totalCount }}
+        </p>
       </div>
 
       <button
@@ -210,7 +221,7 @@ function resetForm() {
                 'text-xs px-3 py-1 rounded-full',
                 project.status === 'active'
                   ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-200 text-gray-700',
+                  : 'bg-gray-200 text-gray-700'
               ]"
             >
               {{ project.status }}
@@ -231,7 +242,7 @@ function resetForm() {
           </button>
 
           <button
-            @click="projectStore.deleteProject(project.id)"
+            @click="deleteProject(project.id)"
             class="text-red-600 hover:text-red-800 text-sm"
           >
             Delete
@@ -248,7 +259,9 @@ function resetForm() {
             @click="toggleStatus(project)"
             class="text-purple-600 hover:text-purple-800 text-sm"
           >
-            {{ project.status === "active" ? "Mark Completed" : "Mark Active" }}
+            {{ project.status === "active"
+              ? "Mark Completed"
+              : "Mark Active" }}
           </button>
         </div>
       </div>
@@ -263,7 +276,10 @@ function resetForm() {
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex justify-center gap-2 mt-10">
+    <div
+      v-if="totalPages > 1"
+      class="flex justify-center gap-2 mt-10"
+    >
       <button
         @click="goToPage(currentPage - 1)"
         class="px-3 py-1 border rounded"
@@ -277,7 +293,9 @@ function resetForm() {
         @click="goToPage(page)"
         :class="[
           'px-3 py-1 border rounded',
-          page === currentPage ? 'bg-blue-600 text-white' : 'bg-white',
+          page === currentPage
+            ? 'bg-blue-600 text-white'
+            : 'bg-white'
         ]"
       >
         {{ page }}
@@ -317,7 +335,10 @@ function resetForm() {
         </p>
 
         <div class="flex justify-end gap-3">
-          <button @click="resetForm" class="px-4 py-2 border rounded">
+          <button
+            @click="resetForm"
+            class="px-4 py-2 border rounded"
+          >
             Cancel
           </button>
 
@@ -340,5 +361,6 @@ function resetForm() {
         </div>
       </div>
     </BaseModal>
+
   </div>
 </template>

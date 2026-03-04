@@ -1,42 +1,68 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 interface User {
   id: number
   name: string
+  email: string
   role: 'admin' | 'member'
 }
 
 export const useAuthStore = defineStore('auth', () => {
 
-  const token = ref<string | null>(localStorage.getItem('token'))
-  const user = ref<User | null>(
-    localStorage.getItem('user')
-      ? JSON.parse(localStorage.getItem('user')!)
-      : null
-  )
+  const user = ref<User | null>(null)
+  const token = ref<string | null>(null)
 
-  const isAuthenticated = computed(() => !!token.value)
+  function login(email: string, password: string) {
 
-  function login(fakeToken: string, fakeUser: User) {
-    token.value = fakeToken
-    user.value = fakeUser
-    localStorage.setItem('token', fakeToken)
-    localStorage.setItem('user', JSON.stringify(fakeUser))
+    if (email === 'admin@gmail.com' && password === 'admin123') {
+
+      user.value = {
+        id: 1,
+        name: 'Admin',
+        email,
+        role: 'admin'
+      }
+
+    } else {
+
+      user.value = {
+        id: 2,
+        name: 'Member',
+        email,
+        role: 'member'
+      }
+
+    }
+
+    token.value = 'demo-token'
+
+    localStorage.setItem('token', token.value)
+    localStorage.setItem('user', JSON.stringify(user.value))
+  }
+
+  function loadUser() {
+    const saved = localStorage.getItem('user')
+
+    if (saved) {
+      user.value = JSON.parse(saved)
+    }
   }
 
   function logout() {
-    token.value = null
     user.value = null
+    token.value = null
+
     localStorage.removeItem('token')
     localStorage.removeItem('user')
   }
 
   return {
-    token,
     user,
-    isAuthenticated,
+    token,
     login,
-    logout
+    logout,
+    loadUser
   }
+
 })

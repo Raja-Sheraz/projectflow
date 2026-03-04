@@ -6,17 +6,14 @@ import { useAuthStore } from '../../stores/authStore'
 const router = useRouter()
 const authStore = useAuthStore()
 
-// 🔹 form state
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
 
-// 🔹 computed validation
 const isFormValid = computed(() => {
   return email.value.includes('@') && password.value.length >= 6
 })
 
-// 🔹 watch example
 watch(email, (newValue) => {
   if (!newValue.includes('@')) {
     errorMessage.value = 'Invalid email format'
@@ -25,18 +22,14 @@ watch(email, (newValue) => {
   }
 })
 
-// 🔹 login handler
 function handleLogin() {
+
   if (!isFormValid.value) return
 
-  // Fake login logic
-  authStore.login('fake-jwt-token', {
-    id: 1,
-    name: 'Raja',
-    role: email.value === 'admin@gmail.com' ? 'admin' : 'member'
-  })
+  authStore.login(email.value, password.value)
 
   router.push('/dashboard')
+
 }
 </script>
 
