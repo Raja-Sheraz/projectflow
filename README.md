@@ -1,42 +1,109 @@
-# projectflow
 
-This template should help get you started developing with Vue 3 in Vite.
+---
 
-## Recommended IDE Setup
+# 🚀 ProjectFlow – Task & Team Management System
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+ProjectFlow is a high-performance **Single Page Application (SPA)** built with **Vue 3**. It serves as a comprehensive demonstration of modern frontend architecture, featuring centralized state management, dynamic routing, and a polished user interface.
 
-## Recommended Browser Setup
+---
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## 🛠️ Tech Stack
 
-## Type Support for `.vue` Imports in TS
+* **Framework:** Vue 3 (Composition API)
+* **State Management:** Pinia
+* **Routing:** Vue Router
+* **Styling:** TailwindCSS
+* **Data Handling:** Axios & LocalStorage (Mock API)
+* **Interactivity:** `vuedraggable` (Kanban functionality)
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+---
 
-## Customize configuration
+## ✨ Features
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+### 🔐 Authentication & Security
 
-## Project Setup
+* **Role-Based Access Control (RBAC):** Distinct interfaces for Admins and Members.
+* **Protected Routes:** Robust route guards to prevent unauthorized access.
+* **Session Persistence:** Token management via LocalStorage.
 
-```sh
+### 📊 Dashboard & Layout
+
+* **Responsive UI:** Fully adaptive sidebar and navigation systems.
+* **Dynamic UX:** Context-aware page titles and breadcrumbs.
+
+### 📁 Project Management
+
+* **Full CRUD:** Create, edit, and delete projects seamlessly.
+* **Advanced Tools:** Integrated search, status filtering, and pagination.
+* **UI Components:** Reusable modals utilizing Vue’s **Teleport** feature.
+
+### 📝 Task Management (Kanban)
+
+* **Visual Workflow:** Drag-and-drop tasks between "Todo," "In Progress," and "Done."
+* **Task Assignment:** Assign specific tasks to team members.
+
+---
+
+## 🧠 Vue Concepts Demonstrated
+
+| Feature | Implementation |
+| --- | --- |
+| **Logic Reuse** | Custom Composables & Composition API |
+| **State** | Pinia Stores with reactive state persistence |
+| **Performance** | Lazy-loaded routes & Debounced search inputs |
+| **Communication** | Advanced Props, Emits, and Slots patterns |
+| **DOM Control** | Teleport for global modals & Nested routing |
+
+---
+
+## 📂 Project Structure
+
+```text
+src
+├── components    # Reusable UI components
+├── layouts       # Dashboard & Auth wrappers
+├── views         # Page-level components
+├── router        # Route guards & definitions
+├── stores        # Pinia state management
+├── composables   # Reusable logic functions
+├── services      # API & LocalStorage handlers
+└── utils         # Helper functions & constants
+
+```
+
+---
+
+## ▶️ Getting Started
+
+1. **Clone the repo**
+2. **Install dependencies:**
+```bash
 npm install
+
 ```
 
-### Compile and Hot-Reload for Development
 
-```sh
+3. **Run in development mode:**
+```bash
 npm run dev
+
 ```
 
-### Type-Check, Compile and Minify for Production
 
-```sh
+4. **Build for production:**
+```bash
 npm run build
+
 ```
+
+
+
+---
+
+## 👤 Author
+
+**Raja Sheraz**
+
+* **GitHub:** [Raja-Sheraz](https://github.com/Raja-Sheraz)
+
+---
