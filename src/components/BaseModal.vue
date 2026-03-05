@@ -3,35 +3,60 @@ const props = defineProps<{
   modelValue: boolean
 }>()
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  (e: "update:modelValue", value: boolean): void
+}>()
 
 function close() {
-  emit('update:modelValue', false)
+  emit("update:modelValue", false)
 }
 </script>
 
 <template>
-  <Teleport to="body">
-    <transition name="fade">
-      <div
-        v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center"
-      >
-        <!-- Overlay -->
-        <div
-          class="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          @click="close"
-        ></div>
 
-        <!-- Modal Box -->
-        <div
-          class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 animate-scale"
-        >
-          <slot />
-        </div>
-      </div>
-    </transition>
-  </Teleport>
+<Teleport to="body">
+
+<transition name="fade">
+
+<div
+v-if="modelValue"
+class="fixed inset-0 z-50 flex items-center justify-center"
+>
+
+<!-- overlay -->
+<div
+class="absolute inset-0 bg-black/40 backdrop-blur-sm"
+@click="close"
+></div>
+
+<!-- modal -->
+<div
+class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10 animate-scale"
+>
+
+<!-- SLOT HEADER -->
+<div class="mb-4">
+<slot name="header"/>
+</div>
+
+<!-- SLOT CONTENT -->
+<div class="mb-4">
+<slot/>
+</div>
+
+<!-- SLOT FOOTER -->
+<div>
+<slot name="footer"/>
+</div>
+
+</div>
+
+</div>
+
+</transition>
+
+</Teleport>
+
 </template>
 
 <style>

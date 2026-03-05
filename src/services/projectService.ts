@@ -1,10 +1,13 @@
 import api from './api'
 import type { Project } from '../stores/projectStore'
 
+
 /* Simulated API using localStorage */
 export const projectService = {
 
   async fetchProjects(): Promise<Project[]> {
+      await api.get("/projects") // demo axios call
+
     await new Promise(resolve => setTimeout(resolve, 500))
 
     const saved = localStorage.getItem('projects')

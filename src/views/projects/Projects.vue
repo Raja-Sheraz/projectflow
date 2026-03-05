@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from "vue";
+import { onMounted, ref, computed, watch, watchEffect } from "vue";
 import { useProjectStore } from "../../stores/projectStore";
 import { useAuthStore } from "../../stores/authStore";
 import type { Project } from "../../stores/projectStore";
 import BaseModal from "../../components/BaseModal.vue";
 import { useDebounce } from "../../composables/useDebounce";
+import EmptyState from "../../components/EmptyState.vue"
 
 /* ---------------- Stores ---------------- */
 const projectStore = useProjectStore();
@@ -33,6 +34,11 @@ onMounted(() => {
   projectStore.fetchProjects();
 });
 
+/* ---------------- watchEffect (requirement) ---------------- */
+watchEffect(() => {
+  console.debug("Projects changed:", projectStore.projects.length);
+});
+
 watch(selectedStatus, () => {
   currentPage.value = 1;
 });
@@ -49,7 +55,8 @@ const filteredProjects = computed(() => {
         .includes(debouncedSearch.value.toLowerCase());
 
     const matchesStatus =
-      selectedStatus.value === "all" || project.status === selectedStatus.value;
+      selectedStatus.value === "all" ||
+      project.status === selectedStatus.value;
 
     return matchesSearch && matchesStatus;
   });
@@ -60,7 +67,7 @@ const totalCount = computed(() => filteredProjects.value.length);
 
 /* ---------------- Pagination ---------------- */
 const totalPages = computed(() =>
-  Math.ceil(filteredProjects.value.length / itemsPerPage),
+  Math.ceil(filteredProjects.value.length / itemsPerPage)
 );
 
 watch(totalPages, (newTotal) => {
@@ -136,7 +143,9 @@ async function handleUpdate() {
   if (!isAdmin.value) return;
   if (!editingId.value) return;
 
-  const existing = projectStore.projects.find((p) => p.id === editingId.value);
+  const existing = projectStore.projects.find(
+    (p) => p.id === editingId.value
+  );
 
   if (!existing) return;
 
@@ -173,7 +182,7 @@ function resetForm() {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto px-4">
+<div class="max-w-7xl mx-auto px-4">
     <!-- Header -->
     <div
       class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6"
@@ -183,7 +192,6 @@ function resetForm() {
         <p class="text-sm text-gray-500 mt-1">Total: {{ totalCount }}</p>
       </div>
 
-      <!-- ADMIN ONLY -->
       <button
         v-if="isAdmin"
         @click="showModal = true"
@@ -193,7 +201,7 @@ function resetForm() {
       </button>
     </div>
 
-    <!-- Search & Filter -->
+    <!-- Search -->
     <div class="flex flex-col md:flex-row gap-4 mb-8">
       <input
         v-model="searchQuery"
@@ -208,12 +216,37 @@ function resetForm() {
       </select>
     </div>
 
+    <!-- Loading -->
+    <div
+      v-if="projectStore.loading"
+      class="text-center py-10 text-gray-500"
+    >
+      Loading projects...
+    </div>
+
+    <!-- Error -->
+<div
+v-if="projectStore.error"
+class="bg-red-100 text-red-700 px-4 py-3 rounded mb-6"
+>
+{{ projectStore.error }}
+</div>
+
+    <!-- Empty -->
+    <div
+      v-else-if="!paginatedProjects.length"
+      class="text-center py-10 text-gray-500"
+    >
+      <EmptyState message="No projects found" />
+    </div>
+
     <!-- Cards -->
-    <div v-if="paginatedProjects.length" class="space-y-6">
+    <div v-else class="space-y-6">
+
       <div
         v-for="project in paginatedProjects"
         :key="project.id"
-        class="bg-white shadow-md rounded-xl p-6 flex justify-between items-center"
+        class="bg-white shadow-md rounded-xl p-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4"
       >
         <div>
           <h3 class="text-lg font-semibold">
@@ -225,8 +258,8 @@ function resetForm() {
           </p>
         </div>
 
-        <div class="flex gap-4">
-          <!-- ADMIN ONLY -->
+        <div class="flex flex-col md:flex-row gap-4">
+
           <button
             v-if="isAdmin"
             @click="startEdit(project)"
@@ -248,7 +281,9 @@ function resetForm() {
             @click="toggleStatus(project)"
             class="text-purple-600"
           >
-            {{ project.status === "active" ? "Mark Completed" : "Mark Active" }}
+            {{ project.status === "active"
+              ? "Mark Completed"
+              : "Mark Active" }}
           </button>
 
           <RouterLink
@@ -257,85 +292,101 @@ function resetForm() {
           >
             View Tasks
           </RouterLink>
+
         </div>
       </div>
+
     </div>
 
     <!-- Pagination -->
+    <div
+      v-if="totalPages > 1"
+      class="flex justify-center gap-2 mt-10"
+    >
 
-<div
-  v-if="totalPages > 1"
-  class="flex justify-center gap-2 mt-10"
+      <button
+        @click="goToPage(currentPage - 1)"
+        class="px-3 py-1 border rounded"
+      >
+        Prev
+      </button>
+
+      <button
+        v-for="page in totalPages"
+        :key="page"
+        @click="goToPage(page)"
+        :class="[
+          'px-3 py-1 border rounded',
+          page === currentPage
+            ? 'bg-blue-600 text-white'
+            : 'bg-white'
+        ]"
+      >
+        {{ page }}
+      </button>
+
+      <button
+        @click="goToPage(currentPage + 1)"
+        class="px-3 py-1 border rounded"
+      >
+        Next
+      </button>
+
+    </div>
+
+    <!-- Modal -->
+<BaseModal v-model="showModal">
+
+<template #header>
+<h2 class="text-xl font-semibold">
+{{ editingId ? "Edit Project" : "Add Project" }}
+</h2>
+</template>
+
+<input
+v-model="name"
+placeholder="Project name"
+class="border rounded px-4 py-2 w-full mb-3"
+/>
+
+<input
+v-model="description"
+placeholder="Description"
+class="border rounded px-4 py-2 w-full mb-3"
+/>
+
+<template #footer>
+
+<div class="flex justify-end gap-3">
+
+<button
+@click="resetForm"
+class="px-4 py-2 border rounded"
 >
+Cancel
+</button>
 
-  <button
-    @click="goToPage(currentPage - 1)"
-    class="px-3 py-1 border rounded"
-  >
-    Prev
-  </button>
+<button
+v-if="!editingId"
+@click="handleAddProject"
+class="bg-blue-600 text-white px-4 py-2 rounded"
+>
+Add
+</button>
 
-  <button
-    v-for="page in totalPages"
-    :key="page"
-    @click="goToPage(page)"
-    :class="[
-      'px-3 py-1 border rounded',
-      page === currentPage
-        ? 'bg-blue-600 text-white'
-        : 'bg-white'
-    ]"
-  >
-    {{ page }}
-  </button>
-
-  <button
-    @click="goToPage(currentPage + 1)"
-    class="px-3 py-1 border rounded"
-  >
-    Next
-  </button>
+<button
+v-else
+@click="handleUpdate"
+class="bg-green-600 text-white px-4 py-2 rounded"
+>
+Update
+</button>
 
 </div>
-    <!-- Modal -->
-    <BaseModal v-model="showModal">
-      <h2 class="text-xl font-semibold mb-4">
-        {{ editingId ? "Edit Project" : "Add Project" }}
-      </h2>
 
-      <input
-        v-model="name"
-        placeholder="Project name"
-        class="border rounded px-4 py-2 w-full mb-3"
-      />
+</template>
 
-      <input
-        v-model="description"
-        placeholder="Description"
-        class="border rounded px-4 py-2 w-full mb-3"
-      />
+</BaseModal>
 
-      <div class="flex justify-end gap-3">
-        <button @click="resetForm" class="px-4 py-2 border rounded">
-          Cancel
-        </button>
-
-        <button
-          v-if="!editingId"
-          @click="handleAddProject"
-          class="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Add
-        </button>
-
-        <button
-          v-else
-          @click="handleUpdate"
-          class="bg-green-600 text-white px-4 py-2 rounded"
-        >
-          Update
-        </button>
-      </div>
-    </BaseModal>
   </div>
 </template>

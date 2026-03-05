@@ -7,11 +7,13 @@ import { useTaskStore } from "../../stores/taskStore"
 import { useUserStore } from "../../stores/userStore"
 import { useAuthStore } from "../../stores/authStore"
 import type { Task } from "../../stores/taskStore"
+import EmptyState from "../../components/EmptyState.vue"
 
 /* ---------------- Stores ---------------- */
 const taskStore = useTaskStore()
 const userStore = useUserStore()
 const authStore = useAuthStore()
+const taskError = ref("")
 
 /* ---------------- Route ---------------- */
 const route = useRoute()
@@ -32,7 +34,18 @@ onMounted(() => {
 
 /* ---------------- Add Task ---------------- */
 function addTask() {
-  if (!title.value.trim()) return
+
+  if (title.value.trim().length < 3) {
+    taskError.value = "Task title must be at least 3 characters"
+    return
+  }
+
+  if (description.value.trim().length < 5) {
+    taskError.value = "Description must be at least 5 characters"
+    return
+  }
+
+  taskError.value = ""
 
   taskStore.addTask({
     projectId,
@@ -46,9 +59,16 @@ function addTask() {
   description.value = ""
 }
 
+
 /* ---------------- Manual Move ---------------- */
 function moveTask(task: Task, status: Task["status"]) {
   if (task.status === status) return
+
+    // prevent moving if not assigned
+  if (!task.assignedTo) {
+    alert("Please assign a user before moving the task.")
+    return
+  }
 
   taskStore.updateTask({
     ...task,
@@ -109,12 +129,27 @@ const doneTasks = computed(() =>
 </script>
 
 <template>
+
 <div class="max-w-7xl mx-auto px-4">
 
-<h2 class="text-2xl font-bold mb-6">Project Tasks</h2>
+<h2 class="text-2xl font-bold mb-6">
+Project Tasks
+</h2>
+
+<!-- Loading -->
+<div
+v-if="taskStore.loading"
+class="text-center py-10 text-gray-500"
+>
+Loading tasks...
+</div>
+
+<div v-else>
 
 <!-- Add Task -->
-<div class="bg-white shadow rounded-lg p-4 mb-6 flex gap-4">
+<div class="bg-white shadow rounded-lg p-4 mb-6">
+
+<div class="flex flex-col md:flex-row gap-4">
 
 <input
 v-model="title"
@@ -137,12 +172,36 @@ Add Task
 
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Error message -->
+<p
+v-if="taskError"
+class="text-red-500 text-sm mt-2"
+>
+{{ taskError }}
+</p>
+
+</div>
+
+
+<!-- Empty -->
+<EmptyState
+v-if="!todoTasks.length && !inProgressTasks.length && !doneTasks.length"
+message="No tasks yet for this project"
+/>
+
+
+<!-- Kanban Board -->
+<div
+v-else
+class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+>
 
 <!-- TODO -->
 <div class="bg-gray-100 rounded-lg p-4">
 
-<h3 class="font-semibold mb-4">Todo</h3>
+<h3 class="font-semibold mb-4">
+Todo
+</h3>
 
 <draggable
 :list="todoTasks"
@@ -155,13 +214,14 @@ item-key="id"
 
 <div class="bg-white p-4 rounded shadow mb-3">
 
-<h4 class="font-medium">{{ element.title }}</h4>
+<h4 class="font-medium">
+{{ element.title }}
+</h4>
 
 <p class="text-sm text-gray-500 mb-2">
 {{ element.description }}
 </p>
 
-<!-- ADMIN -->
 <select
 v-if="isAdmin"
 :value="element.assignedTo ?? ''"
@@ -184,15 +244,12 @@ v-for="user in userStore.users"
 
 </select>
 
-<!-- MEMBER -->
 <p
 v-else
 class="text-xs text-gray-500 mb-2"
 >
 Assigned to:
-{{
-userStore.users.find(u => u.id === element.assignedTo)?.name || "Unassigned"
-}}
+{{ userStore.users.find(u => u.id === element.assignedTo)?.name || "Unassigned" }}
 </p>
 
 <div class="flex justify-between text-xs">
@@ -224,13 +281,18 @@ Delete
 </div>
 
 </template>
+
 </draggable>
+
 </div>
+
 
 <!-- IN PROGRESS -->
 <div class="bg-yellow-100 rounded-lg p-4">
 
-<h3 class="font-semibold mb-4">In Progress</h3>
+<h3 class="font-semibold mb-4">
+In Progress
+</h3>
 
 <draggable
 :list="inProgressTasks"
@@ -243,13 +305,14 @@ item-key="id"
 
 <div class="bg-white p-4 rounded shadow mb-3">
 
-<h4 class="font-medium">{{ element.title }}</h4>
+<h4 class="font-medium">
+{{ element.title }}
+</h4>
 
 <p class="text-sm text-gray-500 mb-2">
 {{ element.description }}
 </p>
 
-<!-- ADMIN -->
 <select
 v-if="isAdmin"
 :value="element.assignedTo ?? ''"
@@ -272,15 +335,12 @@ v-for="user in userStore.users"
 
 </select>
 
-<!-- MEMBER -->
 <p
 v-else
 class="text-xs text-gray-500 mb-2"
 >
 Assigned to:
-{{
-userStore.users.find(u => u.id === element.assignedTo)?.name || "Unassigned"
-}}
+{{ userStore.users.find(u => u.id === element.assignedTo)?.name || "Unassigned" }}
 </p>
 
 <div class="flex justify-between text-xs">
@@ -312,13 +372,18 @@ Delete
 </div>
 
 </template>
+
 </draggable>
+
 </div>
+
 
 <!-- DONE -->
 <div class="bg-green-100 rounded-lg p-4">
 
-<h3 class="font-semibold mb-4">Done</h3>
+<h3 class="font-semibold mb-4">
+Done
+</h3>
 
 <draggable
 :list="doneTasks"
@@ -331,13 +396,14 @@ item-key="id"
 
 <div class="bg-white p-4 rounded shadow mb-3">
 
-<h4 class="font-medium">{{ element.title }}</h4>
+<h4 class="font-medium">
+{{ element.title }}
+</h4>
 
 <p class="text-sm text-gray-500 mb-2">
 {{ element.description }}
 </p>
 
-<!-- ADMIN -->
 <select
 v-if="isAdmin"
 :value="element.assignedTo ?? ''"
@@ -360,15 +426,12 @@ v-for="user in userStore.users"
 
 </select>
 
-<!-- MEMBER -->
 <p
 v-else
 class="text-xs text-gray-500 mb-2"
 >
 Assigned to:
-{{
-userStore.users.find(u => u.id === element.assignedTo)?.name || "Unassigned"
-}}
+{{ userStore.users.find(u => u.id === element.assignedTo)?.name || "Unassigned" }}
 </p>
 
 <div class="flex justify-between text-xs">
@@ -400,9 +463,15 @@ Delete
 </div>
 
 </template>
+
 </draggable>
+
 </div>
 
 </div>
+
 </div>
-</template>  
+
+</div>
+
+</template>

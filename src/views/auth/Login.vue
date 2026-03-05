@@ -63,6 +63,13 @@ function handleLogin() {
       >
         Login
       </button>
+
+      <p class="text-sm text-gray-500 mt-4 text-center">
+  Don't have an account?
+  <RouterLink to="/register" class="text-blue-500">
+    Register
+  </RouterLink>
+</p>
     </div>
   </div>
 </template>

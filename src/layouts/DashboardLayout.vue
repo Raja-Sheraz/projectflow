@@ -12,55 +12,74 @@ function logout() {
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-gray-100">
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white shadow-md p-5">
-      <h2 class="text-xl font-bold mb-6">ProjectFlow</h2>
+<div class="flex min-h-screen bg-gray-50">
 
-      <nav class="space-y-3">
-        <RouterLink to="/dashboard" class="block hover:text-blue-500">
-          Dashboard
-        </RouterLink>
+  <!-- Sidebar -->
+  <aside class="w-64 bg-white shadow-md p-5">
 
-        <RouterLink
+    <h2 class="text-xl font-bold mb-6">
+      ProjectFlow
+    </h2>
+
+    <nav class="space-y-3">
+
+      <RouterLink
+        to="/dashboard"
+        class="block hover:text-blue-500"
+      >
+        Dashboard
+      </RouterLink>
+
+      <RouterLink
         to="/dashboard/projects"
         class="block hover:text-blue-500"
-        >
+      >
         Projects
       </RouterLink>
-      
-      </nav>
-    </aside>
 
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col">
+    </nav>
 
-      <!-- Topbar -->
-      <header class="bg-white shadow p-4 flex justify-between">
-        <h1 class="font-semibold">
-          {{ $route.name }}
-        </h1>
+  </aside>
 
-        <div class="flex items-center gap-4">
-          <span>
-            {{ authStore.user?.name }}
-          </span>
 
-          <button
-            @click="logout"
-            class="bg-red-500 text-white px-3 py-1 rounded"
-          >
-            Logout
-          </button>
-        </div>
-      </header>
+  <!-- Right Side -->
+  <div class="flex-1 flex flex-col">
 
-      <!-- Page Content Slot -->
-      <main class="p-6">
-        <router-view />
-      </main>
+    <!-- Topbar -->
+    <header class="bg-white shadow p-4 flex justify-between">
 
-    </div>
+      <h1 class="font-semibold">
+        {{ $route.name }}
+      </h1>
+
+      <div class="flex items-center gap-4">
+
+        <span>
+          {{ authStore.user?.name }}
+        </span>
+
+        <button
+          @click="logout"
+          class="bg-red-500 text-white px-3 py-1 rounded"
+        >
+          Logout
+        </button>
+
+      </div>
+
+    </header>
+
+
+    <!-- Page Content -->
+    <main class="p-6 flex-1 overflow-y-auto">
+
+      <router-view />
+
+    </main>
+
   </div>
+
+</div>
+
 </template>
