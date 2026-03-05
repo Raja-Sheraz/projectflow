@@ -261,6 +261,42 @@ function resetForm() {
       </div>
     </div>
 
+    <!-- Pagination -->
+
+<div
+  v-if="totalPages > 1"
+  class="flex justify-center gap-2 mt-10"
+>
+
+  <button
+    @click="goToPage(currentPage - 1)"
+    class="px-3 py-1 border rounded"
+  >
+    Prev
+  </button>
+
+  <button
+    v-for="page in totalPages"
+    :key="page"
+    @click="goToPage(page)"
+    :class="[
+      'px-3 py-1 border rounded',
+      page === currentPage
+        ? 'bg-blue-600 text-white'
+        : 'bg-white'
+    ]"
+  >
+    {{ page }}
+  </button>
+
+  <button
+    @click="goToPage(currentPage + 1)"
+    class="px-3 py-1 border rounded"
+  >
+    Next
+  </button>
+
+</div>
     <!-- Modal -->
     <BaseModal v-model="showModal">
       <h2 class="text-xl font-semibold mb-4">
