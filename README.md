@@ -5,6 +5,21 @@
 
 ProjectFlow is a high-performance **Single Page Application (SPA)** built with **Vue 3**. It serves as a comprehensive demonstration of modern frontend architecture, featuring centralized state management, dynamic routing, and a polished user interface.
 
+I built a project management system called ProjectFlow using Vue 3 with Composition API.
+The application allows users to manage projects and tasks using a Kanban board.
+
+It includes:
+
+• Authentication system (login/register)
+• Protected routes using Vue Router guards
+• State management using Pinia
+• API abstraction using Axios
+• LocalStorage persistence
+• Project CRUD with search, filter, and pagination
+• Task management with drag-and-drop Kanban board
+• Reusable components like modal, loader, and empty state
+• A custom composable for debounced search
+
 ---
 
 ## 🛠️ Tech Stack
