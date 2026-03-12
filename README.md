@@ -10,15 +10,15 @@ The application allows users to manage projects and tasks using a Kanban board.
 
 It includes:
 
-• Authentication system (login/register)
-• Protected routes using Vue Router guards
-• State management using Pinia
-• API abstraction using Axios
-• LocalStorage persistence
-• Project CRUD with search, filter, and pagination
-• Task management with drag-and-drop Kanban board
-• Reusable components like modal, loader, and empty state
-• A custom composable for debounced search
+* Authentication system (login/register)
+* Protected routes using Vue Router guards
+* State management using Pinia
+* API abstraction using Axios
+* LocalStorage persistence
+* Project CRUD with search, filter, and pagination
+* Task management with drag-and-drop Kanban board
+* Reusable components like modal, loader, and empty state
+* A custom composable for debounced search
 
 ---
 
